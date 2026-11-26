@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "pvpfx",
+    "name": "PvPFX",
+    "description": "PvP client menu (Right Shift): FPS, CPS, Keystrokes, Armor, Zoom, Toggle Sprint and more, each with its own settings. By @Adryh01.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["@Adryh01"],
+    "credits": "Made by @Adryh01",
+    "url": "https://www.tiktok.com/@adryhh__"
+  }
+]
