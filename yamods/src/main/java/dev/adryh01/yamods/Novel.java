@@ -270,8 +270,7 @@ final class Novel {
             float p = pitch.v;
             if (combo.b) p += Math.min(10, Q.combo) * 0.06F;
             p = Math.max(0.5F, Math.min(2.0F, p));
-            mc.getSoundHandler().playSound(PositionedSoundRecord.create(new ResourceLocation(SOUNDS[sound.idx]), volume.v, p,
-                    (float) mc.thePlayer.posX, (float) mc.thePlayer.posY, (float) mc.thePlayer.posZ));
+            mc.thePlayer.playSound(SOUNDS[sound.idx], volume.v, p);
         }
     }
 
