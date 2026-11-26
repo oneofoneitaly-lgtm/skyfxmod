@@ -6,7 +6,7 @@ import java.util.Locale;
 /** One option of a module: on/off, slider, choice list or colour. */
 public class Setting {
 
-    public static final int BOOL = 0, SLIDER = 1, CHOICE = 2, COLOR = 3, TEXT = 4;
+    public static final int BOOL = 0, SLIDER = 1, CHOICE = 2, COLOR = 3, TEXT = 4, ACTION = 5;
 
     public static final int[] PALETTE = {0xFFFFFF, 0xFF5555, 0xFFAA00, 0xFFFF55, 0x55FF55, 0x55FFFF, 0x5599FF, 0xFF77FF, 0xAAAAAA};
     public static final String[] PALETTE_NAMES = {"White", "Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Pink", "Grey", "Rainbow"};
@@ -19,6 +19,8 @@ public class Setting {
     public String[] opts;
     public String s = "";
     public int maxLen = 16;
+    public boolean hidden;
+    public Runnable run;
 
     private Setting(String key, String label, int type) {
         this.key = key;
@@ -55,6 +57,20 @@ public class Setting {
         return t;
     }
 
+    /** A button in the settings page. */
+    public static Setting action(String key, String label, Runnable run) {
+        Setting a = new Setting(key, label, ACTION);
+        a.run = run;
+        return a;
+    }
+
+    /** A value that is saved but never shown in the menu. */
+    public static Setting hiddenText(String key, int maxLen) {
+        Setting t = text(key, key, "", maxLen);
+        t.hidden = true;
+        return t;
+    }
+
     public static Setting color(String key, String label, int def) {
         Setting s = new Setting(key, label, COLOR);
         s.idx = def;
@@ -78,6 +94,8 @@ public class Setting {
                 return step >= 1.0F ? String.valueOf(Math.round(v)) : String.format(Locale.ROOT, "%.1f", v);
             case TEXT:
                 return s.length() == 0 ? "-" : s;
+            case ACTION:
+                return "Open";
             default:
                 return opts[idx];
         }
@@ -109,6 +127,8 @@ public class Setting {
                 return String.valueOf(v);
             case TEXT:
                 return s;
+            case ACTION:
+                return "";
             default:
                 return String.valueOf(idx);
         }
@@ -119,6 +139,7 @@ public class Setting {
             this.s = str.length() > maxLen ? str.substring(0, maxLen) : str;
             return;
         }
+        if (type == ACTION) return;
         String s = str;
         try {
             switch (type) {

@@ -320,25 +320,80 @@ final class Fx {
     // ------------------------------------------------------------ overlays
 
     static class Crosshair extends Module {
-        final Setting color = Setting.color("color", "Colour", 0);
-        final Setting size = Setting.slider("size", "Size", 5.0F, 2.0F, 15.0F, 1.0F);
-        final Setting gap = Setting.slider("gap", "Gap", 2.0F, 0.0F, 8.0F, 1.0F);
-        final Setting thick = Setting.slider("thick", "Thickness", 1.0F, 1.0F, 3.0F, 1.0F);
-        final Setting dot = Setting.bool("dot", "Centre dot", false);
+        static final int N = 15;
+        /** Paint colours of the custom crosshair editor; index 0 = empty. */
+        static final int[] PAINT = {0, 0xFFFFFF, 0x000000, 0xFF3B3B, 0xFF9F1C, 0xFFE74C, 0x4CD964, 0x2EC4F1, 0x4C7CFF, 0xFF6AD5, 0x9A9A9A, 0xA05A2C};
+
+        final Setting mode = Setting.choice("mode", "Style", 0, "Classic", "My drawing");
+        final Setting color = Setting.color("color", "Colour (classic)", 0);
+        final Setting size = Setting.slider("size", "Size (classic)", 5.0F, 2.0F, 15.0F, 1.0F);
+        final Setting gap = Setting.slider("gap", "Gap (classic)", 2.0F, 0.0F, 8.0F, 1.0F);
+        final Setting thick = Setting.slider("thick", "Thickness (classic)", 1.0F, 1.0F, 3.0F, 1.0F);
+        final Setting dot = Setting.bool("dot", "Centre dot (classic)", false);
+        final Setting scale = Setting.slider("scale", "Size of my drawing", 1.0F, 1.0F, 4.0F, 1.0F);
+        final Setting draw = Setting.action("draw", "Draw my crosshair", new Runnable() {
+            @Override
+            public void run() {
+                Minecraft.getMinecraft().displayGuiScreen(new CrosshairEditor(Minecraft.getMinecraft().currentScreen));
+            }
+        });
+        final Setting pix = Setting.hiddenText("pix", N * N);
 
         Crosshair() {
-            super("crosshair", "Crosshair", "A clean custom crosshair in the middle of the screen.", "Visual");
+            super("crosshair", "Crosshair", "A custom crosshair: classic cross or your own pixel drawing. Hides the vanilla one.", "Visual");
+            settings.add(mode);
+            settings.add(draw);
+            settings.add(scale);
             settings.add(color);
             settings.add(size);
             settings.add(gap);
             settings.add(thick);
             settings.add(dot);
+            settings.add(pix);
+        }
+
+        /** The drawing as palette indexes (N * N). Plus sign when nothing was drawn yet. */
+        int[] cells() {
+            int[] c = new int[N * N];
+            String p = pix.s;
+            if (p.length() != N * N) {
+                int m = N / 2;
+                for (int i = 2; i <= 5; i++) {
+                    c[m * N + (m - i)] = 1;
+                    c[m * N + (m + i)] = 1;
+                    c[(m - i) * N + m] = 1;
+                    c[(m + i) * N + m] = 1;
+                }
+                return c;
+            }
+            for (int i = 0; i < c.length; i++) {
+                int v = Character.digit(p.charAt(i), 16);
+                c[i] = v < 0 || v >= PAINT.length ? 0 : v;
+            }
+            return c;
+        }
+
+        void store(int[] c) {
+            StringBuilder sb = new StringBuilder();
+            for (int v : c) sb.append(Character.forDigit(v, 16));
+            pix.s = sb.toString();
         }
 
         @Override
         public void renderOverlay(int sw, int sh) {
             if (mc.gameSettings.thirdPersonView != 0 || mc.currentScreen != null) return;
-            int cx = sw / 2, cy = sh / 2, s = (int) size.v, g = (int) gap.v, t = (int) thick.v;
+            int cx = sw / 2, cy = sh / 2;
+            if (mode.idx == 1) {
+                int[] c = cells();
+                int sc = (int) scale.v, half = N / 2;
+                for (int i = 0; i < c.length; i++) {
+                    if (c[i] == 0) continue;
+                    int x = cx + (i % N - half) * sc - sc / 2, y = cy + (i / N - half) * sc - sc / 2;
+                    Gui.drawRect(x, y, x + sc, y + sc, 0xFF000000 | PAINT[c[i]]);
+                }
+                return;
+            }
+            int s = (int) size.v, g = (int) gap.v, t = (int) thick.v;
             int c = 0xFF000000 | color.rgb();
             int h = t / 2;
             Gui.drawRect(cx - g - s, cy - h, cx - g, cy - h + t, c);

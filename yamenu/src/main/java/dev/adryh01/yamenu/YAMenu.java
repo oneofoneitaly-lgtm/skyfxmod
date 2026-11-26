@@ -26,7 +26,8 @@ public class YAMenu {
 
     /**
      * Forge's start-up splash is drawn before any mod loads, so it can only be restyled through
-     * config/splash.properties. We write a white / black version; it applies from the next start.
+     * config/splash.properties. We switch it off (no Forge loading bars) so only the vanilla splash is left,
+     * whose logo is replaced by assets/minecraft/textures/gui/title/mojang.png. It applies from the next start.
      */
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent e) {
@@ -38,7 +39,7 @@ public class YAMenu {
                 p.load(in);
                 in.close();
             }
-            String[][] want = {{"enabled", "true"}, {"background", "0xFFFFFF"}, {"font", "0x0"}, {"barBackground", "0xFFFFFF"},
+            String[][] want = {{"enabled", "false"}, {"background", "0xFFFFFF"}, {"font", "0x0"}, {"barBackground", "0xFFFFFF"},
                 {"barBorder", "0x000000"}, {"bar", "0x000000"}, {"showMemory", "false"}, {"rotate", "false"}};
             boolean changed = false;
             for (String[] kv : want) {
@@ -59,6 +60,7 @@ public class YAMenu {
     @Mod.EventHandler
     public void init(FMLInitializationEvent e) {
         MinecraftForge.EVENT_BUS.register(this);
+        org.lwjgl.opengl.Display.setTitle("YA CLIENT");
     }
 
     private static GuiScreen parent() {

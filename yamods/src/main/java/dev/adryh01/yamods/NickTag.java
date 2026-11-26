@@ -12,14 +12,16 @@ import org.lwjgl.opengl.GL11;
 final class NickTag extends Module {
 
     final Setting nick = Setting.text("nick", "Nickname (empty = real name)", "", 16);
-    final Setting who = Setting.choice("who", "Logo on", 1, "Only me", "Everyone");
+    final Setting who = Setting.choice("who", "Logo on", 1, "Only me", "YA users");
     final Setting logo = Setting.bool("logo", "Logo next to the name", true);
+    final Setting announce = Setting.bool("announce", "Tell YA servers I use YA MODS", true);
 
     NickTag() {
-        super("nicktag", "Nick Tag", "Your nickname above your head with the white YA logo beside it.", "Visual");
+        super("nicktag", "Nick Tag", "Your nickname and the YA logo above the head of every YA user (found through the YA CLIENT server, no plugin needed).", "Visual");
         settings.add(nick);
         settings.add(who);
         settings.add(logo);
+        settings.add(announce);
     }
 
     /** Called for every living entity label (before the vanilla one). Nothing is cancelled: the vanilla tag stays. */
@@ -30,7 +32,7 @@ final class NickTag extends Module {
         if (self) {
             if (mc.gameSettings.thirdPersonView == 0) return; // you never see your own tag in first person
         } else {
-            if (who.idx == 0 || !logo.b || pl.isSneaking() || pl.isInvisibleToPlayer(mc.thePlayer)) return;
+            if (who.idx == 0 || !logo.b || !YaNet.uses(pl.getUniqueID()) || pl.isSneaking() || pl.isInvisibleToPlayer(mc.thePlayer)) return;
             double d2 = pl.getDistanceSqToEntity(mc.thePlayer);
             if (d2 >= 64.0D * 64.0D) return;
         }

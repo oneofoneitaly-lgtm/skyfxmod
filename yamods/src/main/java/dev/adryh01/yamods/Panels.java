@@ -257,7 +257,7 @@ final class Panels {
         final Setting heads = Setting.bool("heads", "Show heads", true);
         final Setting ping = Setting.choice("ping", "Ping", 0, "Bars", "Number", "Off");
         final Setting rows = Setting.slider("rows", "Rows per column", 20.0F, 8.0F, 30.0F, 1.0F);
-        final Setting logo = Setting.bool("logo", "YA logo next to every name", true);
+        final Setting logo = Setting.bool("logo", "YA logo next to YA users", true);
 
         TabList() {
             super("tablist", "Tab List", "A cleaner tab list: scale, background, heads and ping style.", "Utility");
@@ -321,7 +321,7 @@ final class Panels {
                 if (bg.b) Gui.drawRect(x, y, x + colW, y + 8, 0x20FFFFFF);
                 int tx = x + 1;
                 if (logo.b) {
-                    Logo.draw(tx, y, 8, 1.0F);
+                    if (YaNet.uses(info.getGameProfile().getId())) Logo.draw(tx, y, 8, 1.0F);
                     tx += Logo.width(8) + 2;
                 }
                 if (heads.b) {

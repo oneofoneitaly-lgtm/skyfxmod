@@ -20,6 +20,8 @@ public class ModMenu extends GuiScreen {
     private static final int GAP = 8, CARD_H = 50, ROW_H = 22;
 
     private String category = "All";
+    private String query = "";
+    private boolean searching;
     private final List<Module> shown = new ArrayList<Module>();
     private Module open;          // module whose settings page is shown
     private Setting dragging;
@@ -48,7 +50,12 @@ public class ModMenu extends GuiScreen {
     private void rebuild() {
         shown.clear();
         for (Module m : Mods.ALL) {
-            if (category.equals("All") || m.category.equals(category)) shown.add(m);
+            if (!(category.equals("All") || m.category.equals(category))) continue;
+            if (query.length() > 0) {
+                String q = query.toLowerCase();
+                if (!m.name.toLowerCase().contains(q) && !m.desc.toLowerCase().contains(q)) continue;
+            }
+            shown.add(m);
         }
         scroll = 0.0F;
         scrollTarget = 0.0F;
@@ -134,6 +141,15 @@ public class ModMenu extends GuiScreen {
             cx += cw + 6;
         }
 
+        int sbw = Math.min(120, Math.max(0, px + pw - 14 - cx - 4)), sbx = px + pw - 14 - sbw;
+        if (sbw >= 70) {
+            UI.roundBox(sbx, py + 43, sbx + sbw, py + 59, 6, searching ? UI.ACCENT : UI.BORDER, 0xFFFFFFFF, 1);
+            String shownQ = query.length() == 0 && !searching ? "Search mods..." : query;
+            if (searching && (System.currentTimeMillis() / 500) % 2 == 0) shownQ += "_";
+            fr.drawString(fr.trimStringToWidth(shownQ, sbw - 12, true), sbx + 6, py + 47, query.length() == 0 && !searching ? UI.SOFT : UI.DARK);
+        }
+        if (shown.isEmpty()) fr.drawString("No mods found.", gx + 4, gy + 6, UI.SOFT);
+
         int max = maxScroll();
         scrollTarget = Math.max(0, Math.min(max, scrollTarget));
         scroll += (scrollTarget - scroll) * 0.35F;
@@ -195,7 +211,7 @@ public class ModMenu extends GuiScreen {
         if (Math.abs(scrollTarget - scroll) < 0.2F) scroll = scrollTarget;
         UI.scissor(mc, gx - 2, gy, gx + gw + 2, gy + gh);
         int y = gy + 4 - (int) scroll;
-        for (Setting s : open.settings) {
+        for (Setting s : rows()) {
             boolean over = mx >= gx && mx < gx + gw && my >= Math.max(y, gy) && my < Math.min(y + ROW_H, gy + gh);
             UI.roundRect(gx, y, gx + gw, y + ROW_H - 2, 4, over ? UI.CARD_HOVER : UI.CARD);
             fr.drawString(s.label, gx + 10, y + 7, UI.DARK);
@@ -213,6 +229,12 @@ public class ModMenu extends GuiScreen {
                     UI.roundBox(tx + fill - 3, y + 5, tx + fill + 3, y + 15, 3, UI.ACCENT, 0xFFFFFFFF, 1);
                     String v = s.display();
                     fr.drawString(v, right - fr.getStringWidth(v), y + 7, UI.MID);
+                    break;
+                }
+                case Setting.ACTION: {
+                    int bw = 106;
+                    UI.roundRect(right - bw, y + 3, right, y + 17, 5, UI.ACCENT);
+                    fr.drawString("Open", right - bw / 2 - fr.getStringWidth("Open") / 2, y + 7, 0xFFFFFFFF);
                     break;
                 }
                 case Setting.TEXT: {
@@ -267,6 +289,12 @@ public class ModMenu extends GuiScreen {
         }
         if (button != 0) return;
 
+        int sx0 = px + 14;
+        for (String c : CATS) sx0 += fr.getStringWidth(c) + 22;
+        int sbw = Math.min(120, Math.max(0, px + pw - 14 - sx0 - 4)), sbx = px + pw - 14 - sbw;
+        searching = sbw >= 70 && mx >= sbx && mx < sbx + sbw && my >= py + 43 && my < py + 59;
+        if (searching) return;
+
         int cx = px + 14;
         for (String c : CATS) {
             int cw = fr.getStringWidth(c) + 16;
@@ -318,7 +346,7 @@ public class ModMenu extends GuiScreen {
         }
         if (my < gy || my >= gy + gh) return;
         int y = gy + 4 - (int) scroll;
-        for (Setting s : open.settings) {
+        for (Setting s : rows()) {
             if (my >= y && my < y + ROW_H && mx >= gx && mx < gx + gw) {
                 int right = gx + gw - 10;
                 if (s.type == Setting.BOOL) {
@@ -329,6 +357,11 @@ public class ModMenu extends GuiScreen {
                     if (button == 0) {
                         dragging = s;
                         sliderTo(s, mx);
+                    }
+                } else if (s.type == Setting.ACTION) {
+                    if (mx >= right - 106 && s.run != null) {
+                        click();
+                        s.run.run();
                     }
                 } else if (s.type == Setting.TEXT) {
                     if (mx >= right - 106) editing = s;
@@ -375,6 +408,24 @@ public class ModMenu extends GuiScreen {
             }
             return;
         }
+        if (searching && open == null) {
+            if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_ESCAPE) {
+                searching = false;
+                if (key == Keyboard.KEY_ESCAPE && query.length() > 0) {
+                    query = "";
+                    rebuild();
+                }
+            } else if (key == Keyboard.KEY_BACK) {
+                if (query.length() > 0) {
+                    query = query.substring(0, query.length() - 1);
+                    rebuild();
+                }
+            } else if (key != Keyboard.KEY_RSHIFT && net.minecraft.util.ChatAllowedCharacters.isAllowedCharacter(c) && query.length() < 20) {
+                query += c;
+                rebuild();
+            }
+            if (key != Keyboard.KEY_RSHIFT) return;
+        }
         if (key == Keyboard.KEY_RSHIFT) {
             mc.displayGuiScreen(null);
             return;
@@ -402,8 +453,16 @@ public class ModMenu extends GuiScreen {
         scrollTarget = gridScroll;
     }
 
+    private List<Setting> rows() {
+        List<Setting> r = new ArrayList<Setting>();
+        for (Setting s : open.settings) {
+            if (!s.hidden) r.add(s);
+        }
+        return r;
+    }
+
     private int settingsMax() {
-        return Math.max(0, open.settings.size() * ROW_H + 4 - gh);
+        return Math.max(0, rows().size() * ROW_H + 4 - gh);
     }
 
     private void click() {

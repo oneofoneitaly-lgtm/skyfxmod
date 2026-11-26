@@ -38,6 +38,7 @@ public class Events {
         }
         if (mc.thePlayer == null) return;
         Q.tick(mc.thePlayer);
+        YaNet.tick();
         for (Module m : Mods.ALL) {
             if (m.enabled) m.onTick();
         }
