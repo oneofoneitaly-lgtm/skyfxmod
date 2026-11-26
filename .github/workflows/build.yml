@@ -42,3 +42,60 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.dir }}/build/libs/${{ matrix.name }}-*.jar
+
+  launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build YA CLIENT launcher (no Electron, one small exe)
+        working-directory: yalauncher
+        shell: bash
+        run: |
+          go get github.com/jchv/go-webview2@latest
+          go mod tidy
+          go install github.com/akavel/rsrc@latest
+          "$(go env GOPATH)/bin/rsrc" -ico icon.ico -o rsrc_windows.syso
+          CGO_ENABLED=0 go build -ldflags "-H=windowsgui -s -w -X main.repo=${{ github.repository }} -X main.version=${{ github.sha }}" -o "YA Client.exe" .
+
+      - name: Upload launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: YA-CLIENT-Launcher
+          path: yalauncher/YA Client.exe
+
+  release:
+    needs: [build, launcher]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Rename jars (the launcher downloads them by fixed name)
+        run: |
+          mkdir out
+          for n in SkyFX YAMods YAMenu; do
+            f=$(ls artifacts/$n/*.jar | grep -v -e sources -e deobf | head -1)
+            cp "$f" out/$n.jar
+          done
+          cp "artifacts/YA-CLIENT-Launcher/YA Client.exe" out/YA-CLIENT.exe
+          printf '%s' '${{ github.sha }}' > out/version.txt
+          ls -la out
+
+      - name: Publish as release "latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest mods
+          files: |
+            out/*.jar
+            out/YA-CLIENT.exe
+            out/version.txt
