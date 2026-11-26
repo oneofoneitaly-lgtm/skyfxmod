@@ -13,8 +13,8 @@ jobs:
         include:
           - dir: skyfx-mod
             name: SkyFX
-          - dir: pvpfx-mod
-            name: PvPFX
+          - dir: yamods
+            name: YAMods
     defaults:
       run:
         working-directory: ${{ matrix.dir }}
