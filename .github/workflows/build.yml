@@ -1,4 +1,4 @@
-name: Build SkyFX (by @Adryh01)
+name: Build mods (by @Adryh01)
 
 on:
   push:
@@ -7,9 +7,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dir: skyfx-mod
+            name: SkyFX
+          - dir: pvpfx-mod
+            name: PvPFX
     defaults:
       run:
-        working-directory: skyfx-mod
+        working-directory: ${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,5 +38,5 @@ jobs:
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: SkyFX
-          path: skyfx-mod/build/libs/SkyFX-*.jar
+          name: ${{ matrix.name }}
+          path: ${{ matrix.dir }}/build/libs/${{ matrix.name }}-*.jar
