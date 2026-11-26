@@ -390,6 +390,7 @@ final class Fx {
         TargetHud() {
             super("targethud", "Target HUD", "Health of the player you are aiming at.", "PvP");
             asHud(0.5F, 0.58F, 0);
+            moved = true;
             background.b = true;
         }
 
@@ -430,6 +431,7 @@ final class Fx {
         InventoryHud() {
             super("inventory", "Inventory", "Shows your inventory on the HUD.", "Utility");
             asHud(0.5F, 0.8F, 0);
+            moved = true;
             background.b = true;
         }
 

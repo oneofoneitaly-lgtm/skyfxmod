@@ -3,7 +3,14 @@ package dev.adryh01.yamods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.DrawBlockHighlightEvent;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
+import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderBlockOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
@@ -15,6 +22,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 public class Events {
 
     private final Minecraft mc = Minecraft.getMinecraft();
+    private int saveTimer;
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent e) {
@@ -22,6 +30,10 @@ public class Events {
 
         if (YAMods.menuKey.isPressed() && mc.currentScreen == null && mc.thePlayer != null) {
             mc.displayGuiScreen(new ModMenu());
+        }
+        if (++saveTimer >= 600) { // every 30 seconds, only writes when something changed
+            saveTimer = 0;
+            Mods.save();
         }
         if (mc.thePlayer == null) return;
         Q.tick(mc.thePlayer);
@@ -64,7 +76,10 @@ public class Events {
     @SubscribeEvent
     public void onAttack(AttackEntityEvent e) {
         if (e.entityPlayer != mc.thePlayer || !(e.target instanceof EntityLivingBase)) return;
-        Q.hit();
+        Q.hit(e.target);
+        for (Module m : Mods.ALL) {
+            if (m.enabled) m.attacked(e.target);
+        }
         Module sp = Mods.byId("hitsparks");
         if (sp != null && sp.enabled) ((Fx.HitSparks) sp).spark(e.target);
         Mods.lastReach = e.entityPlayer.getDistanceToEntity(e.target);
@@ -87,5 +102,55 @@ public class Events {
         if (m != null && m.enabled && e.overlayType == RenderBlockOverlayEvent.OverlayType.FIRE) {
             e.setCanceled(true);
         }
+    }
+
+    @SubscribeEvent
+    public void onWorldLast(RenderWorldLastEvent e) {
+        if (mc.thePlayer == null) return;
+        for (Module m : Mods.ALL) {
+            if (m.enabled) m.renderWorld(e.partialTicks);
+        }
+    }
+
+    @SubscribeEvent
+    public void onBlockHighlight(DrawBlockHighlightEvent e) {
+        for (Module m : Mods.ALL) {
+            if (m.enabled && m.drawBlock(e)) {
+                e.setCanceled(true);
+                return;
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onCamera(EntityViewRenderEvent.CameraSetup e) {
+        for (Module m : Mods.ALL) {
+            if (m.enabled) m.camera(e);
+        }
+    }
+
+    @SubscribeEvent
+    public void onHand(RenderHandEvent e) {
+        for (Module m : Mods.ALL) {
+            if (m.enabled) m.renderHand(e.partialTicks);
+        }
+    }
+
+    @SubscribeEvent
+    public void onChat(ClientChatReceivedEvent e) {
+        for (Module m : Mods.ALL) {
+            if (m.enabled) m.chat(e);
+        }
+    }
+
+    /** Leaving a server (or switching to another one) saves everything. */
+    @SubscribeEvent
+    public void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent e) {
+        Mods.save();
+    }
+
+    @SubscribeEvent
+    public void onWorldUnload(WorldEvent.Unload e) {
+        if (e.world.isRemote) Mods.save();
     }
 }

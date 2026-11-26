@@ -61,6 +61,7 @@ public final class Mods {
         ALL.add(new HideFire());
         Catalog.register(ALL);
         load();
+        saveOnExit();
     }
 
     public static Module byId(String id) {
@@ -109,22 +110,33 @@ public final class Mods {
         }
     }
 
-    public static void save() {
+    private static java.util.Map<String, String> lastSaved;
+
+    /** Writes the settings. Only touches the disk when something changed; the file is replaced in one step. */
+    public static synchronized void save() {
         if (file == null) return;
-        Properties p = new Properties();
+        java.util.TreeMap<String, String> now = new java.util.TreeMap<String, String>();
         for (Module m : ALL) {
-            p.setProperty(m.id + ".enabled", String.valueOf(m.enabled));
+            now.put(m.id + ".enabled", String.valueOf(m.enabled));
             if (m.hud && m.moved) {
-                p.setProperty(m.id + ".x", String.valueOf(m.xf));
-                p.setProperty(m.id + ".y", String.valueOf(m.yf));
+                now.put(m.id + ".x", String.valueOf(m.xf));
+                now.put(m.id + ".y", String.valueOf(m.yf));
             }
-            for (Setting s : m.settings) p.setProperty(m.id + "." + s.key, s.save());
+            for (Setting s : m.settings) now.put(m.id + "." + s.key, s.save());
         }
+        if (now.equals(lastSaved) && file.exists()) return;
+        Properties p = new Properties();
+        p.putAll(now);
+        File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
         FileOutputStream out = null;
         try {
             file.getParentFile().mkdirs();
-            out = new FileOutputStream(file);
+            out = new FileOutputStream(tmp);
             p.store(out, "YA MODS by @Adryh01");
+            out.close();
+            out = null;
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            lastSaved = now;
         } catch (IOException ignored) {
         } finally {
             try {
@@ -134,10 +146,23 @@ public final class Mods {
         }
     }
 
+    private static void saveOnExit() {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                save();
+            }
+        }, "YA-MODS-save"));
+    }
+
     // ------------------------------------------------------------ click tracking
 
     static void click(boolean left) {
         (left ? LEFT : RIGHT).addLast(System.currentTimeMillis());
+        if (left) {
+            net.minecraft.util.MovingObjectPosition o = Q.mc.objectMouseOver;
+            if (o == null || o.typeOfHit != net.minecraft.util.MovingObjectPosition.MovingObjectType.BLOCK) Q.swing();
+        }
     }
 
     static int cps(boolean left) {

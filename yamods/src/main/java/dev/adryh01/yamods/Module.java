@@ -1,6 +1,10 @@
 package dev.adryh01.yamods;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
+import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.DrawBlockHighlightEvent;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +73,30 @@ public abstract class Module {
 
     /** Called every client tick while the module is enabled. */
     public void onTick() {
+    }
+
+    /** Drawing in the 3D world (after the world is rendered). */
+    public void renderWorld(float partialTicks) {
+    }
+
+    /** Return true to replace the vanilla block outline. */
+    public boolean drawBlock(DrawBlockHighlightEvent e) {
+        return false;
+    }
+
+    /** Camera set-up (runs before the camera rotation is applied). */
+    public void camera(EntityViewRenderEvent.CameraSetup e) {
+    }
+
+    /** Runs right before the first-person hand is drawn; GL changes apply to the hand. */
+    public void renderHand(float partialTicks) {
+    }
+
+    /** You attacked an entity. */
+    public void attacked(Entity target) {
+    }
+
+    public void chat(ClientChatReceivedEvent e) {
     }
 
     /** Full-screen drawing that is not a HUD box (crosshair, low health border...). */

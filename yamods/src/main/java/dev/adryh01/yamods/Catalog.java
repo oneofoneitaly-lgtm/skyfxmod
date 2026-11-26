@@ -227,6 +227,19 @@ final class Catalog {
             if (Q.lastHitTime == 0L) return "Last hit: -";
             return Q.f("Last hit: %.1f s", Math.min(99.0D, (System.currentTimeMillis() - Q.lastHitTime) / 1000.0D));
         });
+        all.add(new Pvp.SmoothSneak());
+        all.add(new Pvp.OldAnimations());
+        all.add(new Pvp.HitHearts());
+        all.add(new Pvp.Hitbox());
+        all.add(new Pvp.NoHurtCam());
+        all.add(new Novel.HitWindow());
+        all.add(new Novel.ThrowPreview());
+        all.add(new Novel.FightRecap());
+        all.add(new Novel.HitCoach());
+        all.add(new Novel.HitSounds());
+        all.add(new Novel.KillEffects());
+        all.add(new Novel.DamagePopups());
+        all.add(new Novel.TargetGear());
         all.add(new Fx.HitSparks());
         all.add(new Fx.NoFovEffects());
         all.add(new Fx.TargetHud());
@@ -280,6 +293,7 @@ final class Catalog {
             ItemStack h = Q.p().getHeldItem();
             return "Slot " + (Q.p().inventory.currentItem + 1) + ": " + (h == null ? "empty" : h.getDisplayName());
         });
+        all.add(new Pvp.ChatTime());
         all.add(new DiscordRpc());
         all.add(new Fx.ToggleSneak());
         all.add(new Fx.Fov());
@@ -289,6 +303,9 @@ final class Catalog {
         all.add(new Fx.InventoryHud());
 
         // ------------------------------------------------------------ Visual
+        all.add(new Pvp.BlockOutline());
+        all.add(new Pvp.TimeChanger());
+        all.add(new Pvp.ClearWeather());
         all.add(new Fx.Crosshair());
         all.add(new Fx.LowHealth());
         all.add(new Fx.NoBobbing());

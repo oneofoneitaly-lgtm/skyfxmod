@@ -23,7 +23,7 @@ public class ModMenu extends GuiScreen {
     private final List<Module> shown = new ArrayList<Module>();
     private Module open;          // module whose settings page is shown
     private Setting dragging;     // slider being dragged
-    private float scroll, scrollTarget;
+    private float scroll, scrollTarget, gridScroll;
     private long openTime;
 
     private int px, py, pw, ph, gx, gy, gw, gh, cols, cardW;
@@ -189,9 +189,13 @@ public class ModMenu extends GuiScreen {
         open.knob += ((open.enabled ? 1.0F : 0.0F) - open.knob) * 0.35F;
         UI.sw(gx + gw - 24, py + 45, open.knob);
 
-        int y = gy + 4;
+        scrollTarget = Math.max(0, Math.min(settingsMax(), scrollTarget));
+        scroll += (scrollTarget - scroll) * 0.35F;
+        if (Math.abs(scrollTarget - scroll) < 0.2F) scroll = scrollTarget;
+        UI.scissor(mc, gx - 2, gy, gx + gw + 2, gy + gh);
+        int y = gy + 4 - (int) scroll;
         for (Setting s : open.settings) {
-            boolean over = mx >= gx && mx < gx + gw && my >= y && my < y + ROW_H;
+            boolean over = mx >= gx && mx < gx + gw && my >= Math.max(y, gy) && my < Math.min(y + ROW_H, gy + gh);
             UI.roundRect(gx, y, gx + gw, y + ROW_H - 2, 4, over ? UI.CARD_HOVER : UI.CARD);
             fr.drawString(s.label, gx + 10, y + 7, UI.DARK);
             int right = gx + gw - 10;
@@ -223,6 +227,7 @@ public class ModMenu extends GuiScreen {
             }
             y += ROW_H;
         }
+        UI.scissorOff();
     }
 
     // ----------------------------------------------------------------- input
@@ -273,7 +278,10 @@ public class ModMenu extends GuiScreen {
                 if (mx >= x && mx < x + cardW && my >= y && my < y + CARD_H) {
                     int bx = x + cardW - 62, by = y + CARD_H - 18;
                     if (mx >= bx && mx < bx + 54 && my >= by && my < by + 13) {
+                        gridScroll = scrollTarget;
                         open = m;
+                        scroll = 0.0F;
+                        scrollTarget = 0.0F;
                     } else {
                         m.setEnabled(!m.enabled);
                         Mods.save();
@@ -287,7 +295,7 @@ public class ModMenu extends GuiScreen {
 
     private void clickSettings(int mx, int my, int button) {
         if (button == 0 && mx >= gx && mx < gx + 52 && my >= py + 43 && my < py + 59) {
-            open = null;
+            closeSettings();
             click();
             return;
         }
@@ -297,7 +305,8 @@ public class ModMenu extends GuiScreen {
             click();
             return;
         }
-        int y = gy + 4;
+        if (my < gy || my >= gy + gh) return;
+        int y = gy + 4 - (int) scroll;
         for (Setting s : open.settings) {
             if (my >= y && my < y + ROW_H && mx >= gx && mx < gx + gw) {
                 int right = gx + gw - 10;
@@ -347,7 +356,7 @@ public class ModMenu extends GuiScreen {
             return;
         }
         if (key == Keyboard.KEY_ESCAPE && open != null) {
-            open = null;
+            closeSettings();
             return;
         }
         super.keyTyped(c, key);
@@ -357,10 +366,20 @@ public class ModMenu extends GuiScreen {
     public void handleMouseInput() throws IOException {
         super.handleMouseInput();
         int d = Mouse.getEventDWheel();
-        if (d != 0 && open == null) {
-            scrollTarget -= Integer.signum(d) * (CARD_H * 0.7F);
-            scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget));
+        if (d != 0) {
+            scrollTarget -= Integer.signum(d) * (open == null ? CARD_H * 0.7F : ROW_H * 2.0F);
+            scrollTarget = Math.max(0, Math.min(open == null ? maxScroll() : settingsMax(), scrollTarget));
         }
+    }
+
+    private void closeSettings() {
+        open = null;
+        scroll = gridScroll;
+        scrollTarget = gridScroll;
+    }
+
+    private int settingsMax() {
+        return Math.max(0, open.settings.size() * ROW_H + 4 - gh);
     }
 
     private void click() {
