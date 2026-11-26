@@ -232,8 +232,10 @@ func main() {
 			if err != nil {
 				emit("playError", err.Error())
 			} else {
-				emit("started", "")
-				if st.CloseOnPlay {
+				if gameRunning() {
+					emit("started", "")
+				}
+				if st.CloseOnPlay && gameRunning() {
 					time.Sleep(2 * time.Second)
 					w.Dispatch(func() { w.Terminate() })
 				}

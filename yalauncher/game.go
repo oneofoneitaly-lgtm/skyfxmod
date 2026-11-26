@@ -478,17 +478,26 @@ func launch(p progressFn, st *state) error {
 	}
 	gameProc = cmd
 	go func() {
+		began := time.Now()
 		err := cmd.Wait()
 		if logf != nil {
 			logf.Close()
 		}
+		code := 0
+		if cmd.ProcessState != nil {
+			code = cmd.ProcessState.ExitCode()
+		}
 		if err != nil {
-			conAdd("[launcher] Game closed: " + err.Error())
+			conAdd(fmt.Sprintf("[launcher] Game closed with an error (exit code %d).", code))
 		} else {
 			conAdd("[launcher] Game closed.")
 		}
 		if conSink != nil {
-			conSink("\x00exit")
+			early := ""
+			if code != 0 || time.Since(began) < 25*time.Second {
+				early = "crash"
+			}
+			conSink("\x00exit:" + early)
 		}
 	}()
 	return nil

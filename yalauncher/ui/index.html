@@ -208,7 +208,8 @@ function doPlay(){if(!window._fromSrv){S.join="";setJoin("")}if(!S.account){$("m
   $("play").disabled=true;$("bar").style.display="block";$("fill").style.width="0";$("msg").className="msg";$("msg").textContent="Starting...";play()}
 window.onEvent=(ev,v)=>{
   if(ev=="progress"){$("fill").style.width=Math.round(v.frac*100)+"%";$("msg").textContent=v.text}
-  else if(ev=="console"){if(v=="\x00exit")setRun(false);else conLine(v)}
+  else if(ev=="console"){if(v.indexOf("\x00exit")==0){setRun(false);$("play").disabled=false;$("bar").style.display="none";
+    if(v=="\x00exit:crash"){$("msg").className="msg err";$("msg").textContent="Minecraft closed unexpectedly. The reason is in the Console.";show("console")}else $("msg").textContent=""}else conLine(v)}
   else if(ev=="started"){setRun(true);$("fill").style.width="100%";$("msg").textContent="Minecraft is starting.";$("play").disabled=false}
   else if(ev=="playError"){$("msg").textContent=v;$("msg").className="msg err";$("play").disabled=false;$("bar").style.display="none"}
   else if(ev=="ping"){pings[v.host]=v;renderSrv()}
