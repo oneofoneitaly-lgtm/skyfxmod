@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "skyfx",
+    "name": "SkyFX",
+    "description": "Custom skies (including void skies) with a clean white/grey menu and live previews. Open it with /skyfx. By @Adryh01.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["@Adryh01"],
+    "credits": "Made by @Adryh01",
+    "url": "https://www.tiktok.com/@adryhh__"
+  }
+]
