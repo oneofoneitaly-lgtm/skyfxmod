@@ -5,12 +5,12 @@ Press **Right Shift** to open it. Every module has its own settings; HUD modules
 
 ![menu](docs/menu.png)
 
-## Modules (108)
+## Modules (111)
 **Info** — FPS (colour by value), Coordinates, Ping, Clock, Potion Status, Speed, Direction, Session Time, Memory, Player Count, Server Address, Entity Count, Fall Distance, Health, Food, XP Level, XP Progress, Block Info, Item Info, Nearby Players, Nether Coords, Death Location, Day Counter, Light Level, Chunk Position, Target Distance, Sprint State, Game Mode, Look Angles, Distance Walked, Mount Speed, Breath, Mob Counter, Dropped Items, Session Stats
 
 **PvP** — CPS, Keystrokes, Armor Status, Reach, Target HUD, Combo, Bow Charge, Potion/Gapple/Pearl/Arrow/Obsidian counters, Supplies, Crystals Nearby, Crystal Distance, Armor Value, Last Damage, Block State, Burning Alert, Armor Warning, Lag Warning, Gapples Eaten, Gapple Warning, Hit Timer, Hit Sparks, No FOV Effects, **Smooth Shift**, **1.7 Animations**, **Hit Hearts**, **Hitbox** (colour + colour when aiming), No Hurt Cam, **Hit Window**, **Throw Preview**, **Fight Recap**, **Hit Coach**, Hit Sounds, Kill Effects, Damage Popups, Target Gear
 
-**Utility** — Toggle Sprint, Toggle Sneak, Zoom (C), FOV, FPS Boost, Unlimited FPS, VSync Off, Inventory HUD, Free Slots, XP Bottles, Held Item Count, Blocks Left, BedWars Resources / Items, Bucket Count, Firework Count, Hunger / Tool / Fall warnings, Hotbar Slot, Chat Timestamps, Discord RPC (Windows)
+**Utility** — Toggle Sprint, Toggle Sneak, Zoom (C), FOV, FPS Boost, Unlimited FPS, VSync Off, Inventory HUD, Free Slots, XP Bottles, Held Item Count, Blocks Left, BedWars Resources / Items, Bucket Count, Firework Count, Hunger / Tool / Fall warnings, Hotbar Slot, **Scoreboard**, **Chat**, **Tab List** (move / resize the scoreboard and chat, remove their background), Chat Timestamps, Discord RPC (Windows)
 
 **Visual** — Fullbright, Hide Fire, **Block Outline** (colour, thickness, fill), Time Changer, Clear Weather, Crosshair, Low Health, No Bobbing, No Clouds, No Screen Effects, Rainbow HUD, YA Trail
 

@@ -149,6 +149,7 @@ final class Pvp {
         final Setting count = Setting.slider("count", "Hearts per hit", 4.0F, 1.0F, 10.0F, 1.0F);
         final Setting life = Setting.slider("life", "Duration (s)", 1.2F, 0.5F, 3.0F, 0.1F);
         final Setting size = Setting.slider("size", "Size", 1.0F, 0.5F, 2.0F, 0.1F);
+        final Setting color = Setting.color("color", "Heart colour", 1);
         final Setting health = Setting.bool("health", "Show target health", true);
         private final List<P> list = new ArrayList<P>();
         private final Random rnd = new Random();
@@ -158,6 +159,7 @@ final class Pvp {
             settings.add(count);
             settings.add(life);
             settings.add(size);
+            settings.add(color);
             settings.add(health);
         }
 
@@ -189,6 +191,57 @@ final class Pvp {
             if (list.size() > 120) list.subList(0, list.size() - 120).clear();
         }
 
+        private static final String[] SHAPE = {
+                ".XX...XX.",
+                "XXXX.XXXX",
+                "XXXXXXXXX",
+                "XXXXXXXXX",
+                ".XXXXXXX.",
+                "..XXXXX..",
+                "...XXX...",
+                "....X...."};
+
+        private static boolean cell(int r, int c) {
+            return r >= 0 && r < SHAPE.length && c >= 0 && c < 9 && SHAPE[r].charAt(c) == 'X';
+        }
+
+        /** A pixel heart in any colour (fill + darker outline + a small highlight), drawn in one batch. */
+        private static void heart(int x, int y, int rgb, float alpha) {
+            int a = (int) (Math.max(0.0F, Math.min(1.0F, alpha)) * 255.0F);
+            int fr = (rgb >> 16) & 255, fg = (rgb >> 8) & 255, fb = rgb & 255;
+            int or = fr * 35 / 100, og = fg * 35 / 100, ob = fb * 35 / 100;
+            GlStateManager.disableTexture2D();
+            GlStateManager.disableCull();
+            Tessellator t = Tessellator.getInstance();
+            WorldRenderer w = t.getWorldRenderer();
+            w.begin(7, DefaultVertexFormats.POSITION_COLOR);
+            for (int r = -1; r <= SHAPE.length; r++) {
+                for (int c = -1; c <= 9; c++) {
+                    int cr, cg, cb;
+                    if (cell(r, c)) {
+                        boolean hi = r == 1 && c == 1;
+                        cr = hi ? Math.min(255, fr + 110) : fr;
+                        cg = hi ? Math.min(255, fg + 110) : fg;
+                        cb = hi ? Math.min(255, fb + 110) : fb;
+                    } else if (cell(r - 1, c) || cell(r + 1, c) || cell(r, c - 1) || cell(r, c + 1)) {
+                        cr = or;
+                        cg = og;
+                        cb = ob;
+                    } else {
+                        continue;
+                    }
+                    double x0 = x + c, y0 = y + r;
+                    w.pos(x0, y0 + 1, 0).color(cr, cg, cb, a).endVertex();
+                    w.pos(x0 + 1, y0 + 1, 0).color(cr, cg, cb, a).endVertex();
+                    w.pos(x0 + 1, y0, 0).color(cr, cg, cb, a).endVertex();
+                    w.pos(x0, y0, 0).color(cr, cg, cb, a).endVertex();
+                }
+            }
+            t.draw();
+            GlStateManager.enableCull();
+            GlStateManager.enableTexture2D();
+        }
+
         @Override
         public void renderWorld(float pt) {
             if (list.isEmpty()) return;
@@ -215,20 +268,15 @@ final class Pvp {
                 GlStateManager.rotate(rm.playerViewX, 1.0F, 0.0F, 0.0F);
                 float s = 0.025F * size.v;
                 GlStateManager.scale(-s, -s, s);
+                int rgb = color.rgb();
                 if (p.label) {
                     String t = Q.f("%.1f", p.e.getHealth());
                     int w = 11 + fr.getStringWidth(t);
-                    mc.getTextureManager().bindTexture(Gui.icons);
-                    GlStateManager.color(1.0F, 1.0F, 1.0F, a);
-                    GUI.drawTexturedModalRect(-w / 2, -5, 16, 0, 9, 9);
-                    GUI.drawTexturedModalRect(-w / 2, -5, 52, 0, 9, 9);
+                    heart(-w / 2, -5, rgb, a);
                     int al = (int) (a * 255.0F);
                     if (al > 8) fr.drawStringWithShadow(t, -w / 2 + 11, -4, (al << 24) | 0xFFFFFF);
                 } else {
-                    mc.getTextureManager().bindTexture(Gui.icons);
-                    GlStateManager.color(1.0F, 1.0F, 1.0F, a);
-                    GUI.drawTexturedModalRect(-5, -5, 16, 0, 9, 9);
-                    GUI.drawTexturedModalRect(-5, -5, 52, 0, 9, 9);
+                    heart(-5, -5, rgb, a);
                 }
                 GlStateManager.popMatrix();
             }

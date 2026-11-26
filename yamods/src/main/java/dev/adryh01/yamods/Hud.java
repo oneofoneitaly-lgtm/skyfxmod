@@ -20,11 +20,15 @@ public final class Hud {
     private static int curX, curY, colW;
 
     public static void renderAll(int sw, int sh, boolean editing) {
+        renderAll(sw, sh, editing, false);
+    }
+
+    public static void renderAll(int sw, int sh, boolean editing, boolean debugOnly) {
         curX = 4;
         curY = 4;
         colW = 0;
         for (Module m : Mods.ALL) {
-            if (!m.enabled) continue;
+            if (!m.enabled || (debugOnly && !m.showInDebug)) continue;
             if (m.hud) m.renderHud(sw, sh, editing);
             else if (!editing) m.renderOverlay(sw, sh);
         }

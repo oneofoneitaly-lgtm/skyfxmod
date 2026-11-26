@@ -293,6 +293,9 @@ final class Catalog {
             ItemStack h = Q.p().getHeldItem();
             return "Slot " + (Q.p().inventory.currentItem + 1) + ": " + (h == null ? "empty" : h.getDisplayName());
         });
+        all.add(new Panels.Board());
+        all.add(new Panels.ChatBox());
+        all.add(new Panels.TabList());
         all.add(new Pvp.ChatTime());
         all.add(new DiscordRpc());
         all.add(new Fx.ToggleSneak());

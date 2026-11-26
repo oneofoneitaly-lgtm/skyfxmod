@@ -46,18 +46,25 @@ public class Events {
 
     @SubscribeEvent
     public void onCrosshair(RenderGameOverlayEvent.Pre e) {
-        if (e.type != RenderGameOverlayEvent.ElementType.CROSSHAIRS) return;
-        Module c = Mods.byId("crosshair");
-        if (c != null && c.enabled) e.setCanceled(true);
+        if (e.type == RenderGameOverlayEvent.ElementType.CROSSHAIRS) {
+            Module c = Mods.byId("crosshair");
+            if (c != null && c.enabled) e.setCanceled(true);
+        } else if (e.type == RenderGameOverlayEvent.ElementType.PLAYER_LIST) {
+            Module t = Mods.byId("tablist");
+            if (t != null && t.enabled) e.setCanceled(true); // our own tab list is drawn instead
+        } else if (e.type == RenderGameOverlayEvent.ElementType.CHAT) {
+            Module c = Mods.byId("chatbox");
+            if (c != null && c.enabled && ((Panels.ChatBox) c).ready()) e.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
     public void onOverlay(RenderGameOverlayEvent.Post e) {
         if (e.type != RenderGameOverlayEvent.ElementType.ALL) return;
-        if (mc.thePlayer == null || mc.gameSettings.showDebugInfo || mc.gameSettings.hideGUI) return;
+        if (mc.thePlayer == null || mc.gameSettings.hideGUI) return;
         if (mc.currentScreen instanceof HudEditor) return; // the editor draws the HUD itself
         ScaledResolution sr = new ScaledResolution(mc);
-        Hud.renderAll(sr.getScaledWidth(), sr.getScaledHeight(), false);
+        Hud.renderAll(sr.getScaledWidth(), sr.getScaledHeight(), false, mc.gameSettings.showDebugInfo);
     }
 
     @SubscribeEvent

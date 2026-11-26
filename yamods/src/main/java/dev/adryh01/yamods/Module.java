@@ -21,6 +21,7 @@ public abstract class Module {
     public float xf, yf; // position as a fraction of the free screen space (0..1)
     public int lastX, lastY, lastW, lastH; // bounds of the last render, in GUI pixels
     public Setting scale, shadow, background, color;
+    public boolean showInDebug; // still drawn while the F3 screen is open
     public boolean moved;   // false = automatically stacked on the left, true = placed by the user
     public int override;    // 0 = use the colour setting, otherwise 0xRRGGBB for this frame
 
