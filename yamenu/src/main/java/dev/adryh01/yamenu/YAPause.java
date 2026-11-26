@@ -2,8 +2,6 @@ package dev.adryh01.yamenu;
 
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiOptions;
 import net.minecraft.client.gui.GuiShareToLan;
 import net.minecraft.client.gui.achievement.GuiAchievements;
@@ -57,8 +55,9 @@ final class YAPause extends YAScreen {
                 b.enabled = false;
                 mc.theWorld.sendQuittingDisconnectingPacket();
                 mc.loadWorld(null);
-                if (local) mc.displayGuiScreen(new GuiMainMenu());
-                else mc.displayGuiScreen(new GuiMultiplayer(new GuiMainMenu()));
+                // leaving a server returns to the multiplayer list, leaving a world to the title screen
+                if (local) mc.displayGuiScreen(new YAMainMenu());
+                else mc.displayGuiScreen(new YAMultiplayer(new YAMainMenu()));
                 break;
             default:
         }

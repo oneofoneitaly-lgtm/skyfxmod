@@ -213,54 +213,106 @@ public final class Mods {
     }
 
     static class Keystrokes extends Module {
+        static final int[] KEY_COLORS = {0x000000, 0x2E2E2E, 0xFFFFFF, 0xE21C30, 0x2F6BFF, 0x2ECC71, 0x8E44AD, 0xFF9F1C};
+        static final String[] KEY_NAMES = {"Black", "Dark grey", "White", "Red", "Blue", "Green", "Purple", "Orange"};
+
         final Setting mouse = Setting.bool("mouse", "Show mouse buttons", true);
+        final Setting cpsOn = Setting.bool("cps", "Show CPS on mouse buttons", true);
         final Setting space = Setting.bool("space", "Show space bar", true);
-        final float[] anim = new float[7];
+        final Setting extra = Setting.bool("extra", "Show sprint / sneak", false);
+        final Setting arrows = Setting.choice("labels", "Movement labels", 0, "Letters", "Arrows");
+        final Setting size = Setting.slider("size", "Key size", 20.0F, 14.0F, 32.0F, 1.0F);
+        final Setting gap = Setting.slider("gap", "Space between keys", 2.0F, 0.0F, 6.0F, 1.0F);
+        final Setting radius = Setting.slider("radius", "Rounded corners", 0.0F, 0.0F, 8.0F, 1.0F);
+        final Setting idle = Setting.choice("idle", "Key colour", 0, KEY_NAMES);
+        final Setting pressed = Setting.choice("pressed", "Pressed colour", 2, KEY_NAMES);
+        final Setting idleA = Setting.slider("idlea", "Key opacity", 50.0F, 0.0F, 100.0F, 5.0F);
+        final Setting pressedA = Setting.slider("pressa", "Pressed opacity", 80.0F, 0.0F, 100.0F, 5.0F);
+        final Setting pressedText = Setting.choice("ptext", "Pressed text", 0, "Dark", "White", "Same");
+        final Setting outline = Setting.bool("outline", "Outline", false);
+        final Setting outlineColor = Setting.color("outlinecolor", "Outline colour", 0);
+        final Setting shadow = Setting.bool("shadow", "Text shadow", false);
+        final Setting fade = Setting.slider("fade", "Press animation speed", 35.0F, 10.0F, 100.0F, 5.0F);
+        final float[] anim = new float[12];
 
         Keystrokes() {
-            super("keystrokes", "Keystrokes", "WASD, mouse and space with CPS.", "PvP");
+            super("keystrokes", "Keystrokes", "WASD, mouse, space and CPS. Colours, size, corners and more.", "PvP");
             settings.add(mouse);
+            settings.add(cpsOn);
             settings.add(space);
+            settings.add(extra);
+            settings.add(arrows);
+            settings.add(size);
+            settings.add(gap);
+            settings.add(radius);
+            settings.add(idle);
+            settings.add(pressed);
+            settings.add(idleA);
+            settings.add(pressedA);
+            settings.add(pressedText);
+            settings.add(outline);
+            settings.add(outlineColor);
+            settings.add(shadow);
+            settings.add(fade);
             asHud(0.01F, 0.45F, 0);
         }
 
         @Override
         public void renderHud(int sw, int sh, boolean editing) {
-            final boolean showMouse = mouse.b, showSpace = space.b;
-            int h = 42 + (showMouse ? 22 : 0) + (showSpace ? 14 : 0);
-            Hud.box(this, sw, sh, 64, h, (m, fr) -> {
-                key(fr, 0, 22, 0, 20, 20, "W", mc.gameSettings.keyBindForward.isKeyDown(), null);
-                key(fr, 1, 0, 22, 20, 20, "A", mc.gameSettings.keyBindLeft.isKeyDown(), null);
-                key(fr, 2, 22, 22, 20, 20, "S", mc.gameSettings.keyBindBack.isKeyDown(), null);
-                key(fr, 3, 44, 22, 20, 20, "D", mc.gameSettings.keyBindRight.isKeyDown(), null);
-                int y = 44;
+            final int s = (int) size.v, g = (int) gap.v;
+            final int w = 3 * s + 2 * g;
+            final int half = (w - g) / 2;
+            final int spaceH = Math.max(10, s / 2), extraH = Math.max(12, (int) (s * 0.7F));
+            final boolean showMouse = mouse.b, showSpace = space.b, showExtra = extra.b;
+            int h = 2 * s + g;
+            if (showMouse) h += g + s;
+            if (showSpace) h += g + spaceH;
+            if (showExtra) h += g + extraH;
+            final boolean arr = arrows.idx == 1;
+            Hud.box(this, sw, sh, w, h, (m, fr) -> {
+                key(fr, 0, s + g, 0, s, s, arr ? "^" : "W", mc.gameSettings.keyBindForward.isKeyDown(), null);
+                key(fr, 1, 0, s + g, s, s, arr ? "<" : "A", mc.gameSettings.keyBindLeft.isKeyDown(), null);
+                key(fr, 2, s + g, s + g, s, s, arr ? "v" : "S", mc.gameSettings.keyBindBack.isKeyDown(), null);
+                key(fr, 3, 2 * (s + g), s + g, s, s, arr ? ">" : "D", mc.gameSettings.keyBindRight.isKeyDown(), null);
+                int y = 2 * s + 2 * g;
                 if (showMouse) {
-                    key(fr, 4, 0, y, 31, 20, "LMB", mc.gameSettings.keyBindAttack.isKeyDown(), String.valueOf(cps(true)));
-                    key(fr, 5, 33, y, 31, 20, "RMB", mc.gameSettings.keyBindUseItem.isKeyDown(), String.valueOf(cps(false)));
-                    y += 22;
+                    boolean c = cpsOn.b;
+                    key(fr, 4, 0, y, half, s, "LMB", mc.gameSettings.keyBindAttack.isKeyDown(), c ? String.valueOf(cps(true)) : null);
+                    key(fr, 5, half + g, y, w - half - g, s, "RMB", mc.gameSettings.keyBindUseItem.isKeyDown(), c ? String.valueOf(cps(false)) : null);
+                    y += s + g;
                 }
                 if (showSpace) {
-                    key(fr, 6, 0, y, 64, 12, "", mc.gameSettings.keyBindJump.isKeyDown(), null);
-                    Gui.drawRect(20, y + 5, 44, y + 6, 0xFF000000 | Setting.PALETTE[0]);
+                    key(fr, 6, 0, y, w, spaceH, "", mc.gameSettings.keyBindJump.isKeyDown(), null);
+                    Gui.drawRect(w / 2 - 12, y + spaceH / 2, w / 2 + 12, y + spaceH / 2 + 1, 0xFF000000 | color.rgb());
+                    y += spaceH + g;
+                }
+                if (showExtra) {
+                    key(fr, 7, 0, y, half, extraH, "Sprint", mc.gameSettings.keyBindSprint.isKeyDown(), null);
+                    key(fr, 8, half + g, y, w - half - g, extraH, "Sneak", mc.gameSettings.keyBindSneak.isKeyDown(), null);
                 }
             });
         }
 
         private void key(FontRenderer fr, int i, int x, int y, int w, int h, String label, boolean down, String sub) {
-            anim[i] += ((down ? 1.0F : 0.0F) - anim[i]) * 0.35F;
+            anim[i] += ((down ? 1.0F : 0.0F) - anim[i]) * (fade.v / 100.0F);
             float t = anim[i];
-            int a = (int) (128 + (208 - 128) * t);
-            int rgb = Setting.PALETTE[0];
-            int bg = (a << 24) | lerp(0x000000, 0xFFFFFF, t);
-            Gui.drawRect(x, y, x + w, y + h, bg);
-            int tc = 0xFF000000 | lerp(color.rgb(), 0x202020, t);
+            int rgb = lerp(KEY_COLORS[idle.idx], KEY_COLORS[pressed.idx], t);
+            int a = (int) ((idleA.v + (pressedA.v - idleA.v) * t) * 2.55F);
+            int r = (int) radius.v;
+            if (outline.b) UI.roundRect(x, y, x + w, y + h, r, 0xFF000000 | outlineColor.rgb());
+            int in = outline.b ? 1 : 0;
+            UI.roundRect(x + in, y + in, x + w - in, y + h - in, Math.max(0, r - in), (a << 24) | rgb);
             if (label.length() == 0) return;
-            if (sub == null) {
-                fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - 8) / 2, tc);
-            } else {
-                fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + 2, tc);
-                fr.drawString(sub, x + (w - fr.getStringWidth(sub)) / 2, y + 11, tc);
-            }
+            int ptc = pressedText.idx == 0 ? 0x202020 : pressedText.idx == 1 ? 0xFFFFFF : color.rgb();
+            int tc = 0xFF000000 | lerp(color.rgb(), ptc, t);
+            int ty = sub == null ? y + (h - 8) / 2 : y + 2;
+            draw(fr, label, x + (w - fr.getStringWidth(label)) / 2, ty, tc);
+            if (sub != null) draw(fr, sub, x + (w - fr.getStringWidth(sub)) / 2, y + Math.min(h - 9, 11), tc);
+        }
+
+        private void draw(FontRenderer fr, String t, int x, int y, int c) {
+            if (shadow.b) fr.drawStringWithShadow(t, x, y, c);
+            else fr.drawString(t, x, y, c);
         }
     }
 

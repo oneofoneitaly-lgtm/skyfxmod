@@ -114,10 +114,24 @@ final class Pvp {
          * Vanilla 1.8.9 throws away attack clicks while you block / eat / draw a bow. Like in 1.7 we let the
          * click through: the arm swings and, if you aim at something, the hit is sent.
          */
+        private boolean wasDown;
+        private long lastSwing;
+
+        /** Backup for clicks that never reach the mouse event: watch the attack button every tick. */
+        @Override
+        public void onTick() {
+            boolean down = org.lwjgl.input.Mouse.isButtonDown(0);
+            if (down && !wasDown && mc.currentScreen == null) leftClick();
+            wasDown = down;
+        }
+
         @Override
         public void leftClick() {
+            long now = System.currentTimeMillis();
+            if (now - lastSwing < 120L) return; // the mouse event and the tick check saw the same click
             EntityPlayerSP p = mc.thePlayer;
             if (p == null || mc.currentScreen != null || !p.isUsingItem()) return;
+            lastSwing = now;
             ItemStack h = p.getHeldItem();
             boolean blocking = h != null && h.getItem().getItemUseAction(h) == EnumAction.BLOCK;
             if (blocking ? !blockHit.b : !useSwing.b) return;

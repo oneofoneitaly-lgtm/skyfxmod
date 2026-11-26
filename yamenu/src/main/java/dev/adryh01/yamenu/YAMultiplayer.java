@@ -1,6 +1,13 @@
 package dev.adryh01.yamenu;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.util.ResourceLocation;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiScreenAddServer;
 import net.minecraft.client.gui.GuiScreenServerList;
@@ -19,7 +26,10 @@ import java.util.concurrent.Executors;
 
 final class YAMultiplayer extends YAScreen {
 
-    private static final int ROW = 42;
+    private static final int ROW = 46;
+    private static final ResourceLocation UNKNOWN = new ResourceLocation("textures/misc/unknown_server.png");
+    private final Map<String, ResourceLocation> icons = new HashMap<String, ResourceLocation>();
+    private final Map<String, String> iconData = new HashMap<String, String>();
     private static final ExecutorService POOL = Executors.newFixedThreadPool(4, new java.util.concurrent.ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
@@ -94,6 +104,9 @@ final class YAMultiplayer extends YAScreen {
     @Override
     public void onGuiClosed() {
         pinger.clearPendingNetworks();
+        for (ResourceLocation rl : icons.values()) mc.getTextureManager().deleteTexture(rl);
+        icons.clear();
+        iconData.clear();
     }
 
     @Override
@@ -153,6 +166,27 @@ final class YAMultiplayer extends YAScreen {
         mc.displayGuiScreen(this);
     }
 
+    /** The server's own picture (sent in the ping answer), or the grey default one. */
+    private ResourceLocation icon(ServerData sd) {
+        String data = sd.getBase64EncodedIconData();
+        String key = sd.serverIP;
+        if (data == null || data.length() == 0) return UNKNOWN;
+        if (!data.equals(iconData.get(key))) {
+            iconData.put(key, data);
+            try {
+                if (icons.containsKey(key)) mc.getTextureManager().deleteTexture(icons.remove(key));
+                BufferedImage img = javax.imageio.ImageIO.read(new ByteArrayInputStream(java.util.Base64.getMimeDecoder().decode(data)));
+                ResourceLocation rl = new ResourceLocation("yamenu", "servers/" + Integer.toHexString(key.hashCode()) + "/icon");
+                mc.getTextureManager().loadTexture(rl, new DynamicTexture(img));
+                icons.put(key, rl);
+            } catch (Exception e) {
+                icons.remove(key);
+            }
+        }
+        ResourceLocation rl = icons.get(key);
+        return rl == null ? UNKNOWN : rl;
+    }
+
     private int listTop() {
         return 44;
     }
@@ -205,10 +239,14 @@ final class YAMultiplayer extends YAScreen {
             ServerData sd = servers.getServerData(i);
             boolean over = mx >= x && mx <= x + cw && my >= Math.max(y, top) && my < Math.min(y + ROW - 4, bot);
             UI.box(x, y, x + cw, y + ROW - 4, 6, i == sel ? UI.ACCENT : UI.BORDER, over ? 0xFFFAFAFA : UI.CARD);
-            fontRendererObj.drawString(sd.serverName, x + 10, y + 6, UI.DARK);
+            mc.getTextureManager().bindTexture(icon(sd));
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            Gui.drawScaledCustomSizeModalRect(x + 8, y + 5, 0.0F, 0.0F, 64, 64, 32, 32, 64.0F, 64.0F);
+            int tx = x + 50;
+            fontRendererObj.drawString(sd.serverName, tx, y + 6, UI.DARK);
             String motd = sd.serverMOTD == null ? "" : net.minecraft.util.EnumChatFormatting.getTextWithoutFormattingCodes(sd.serverMOTD.split("\n")[0]);
-            fontRendererObj.drawString(fontRendererObj.trimStringToWidth(motd == null ? "" : motd, cw - 120), x + 10, y + 19, UI.MID);
-            fontRendererObj.drawString(sd.serverIP, x + 10, y + 29, UI.SOFT);
+            fontRendererObj.drawString(fontRendererObj.trimStringToWidth(motd == null ? "" : motd, cw - 170), tx, y + 19, UI.MID);
+            fontRendererObj.drawString(sd.serverIP, tx, y + 30, UI.SOFT);
             if (sd.pingToServer >= 0L) {
                 String p = sd.pingToServer + " ms";
                 int pc = sd.pingToServer < 150L ? 0xFF2E8B3A : sd.pingToServer < 400L ? 0xFFC98A00 : UI.RED;

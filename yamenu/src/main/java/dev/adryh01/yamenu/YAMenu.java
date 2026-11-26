@@ -65,7 +65,8 @@ public class YAMenu {
 
     private static GuiScreen parent() {
         GuiScreen cur = Minecraft.getMinecraft().currentScreen;
-        return cur instanceof YAScreen ? cur : new YAMainMenu();
+        // never go "back" to the pause menu: it only exists while a world is loaded
+        return cur instanceof YAScreen && !(cur instanceof YAPause) ? cur : new YAMainMenu();
     }
 
     @SubscribeEvent
