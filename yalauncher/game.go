@@ -461,7 +461,7 @@ func launch(p progressFn, st *state) error {
 	cmd := exec.Command(java, append(jvm, gameArgs...)...)
 	cmd.Dir = game
 	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW: no console, but the game window must stay visible
 	}
 	logf, _ := os.Create(filepath.Join(dataDir, "last-launch.log"))
 	conClear()
