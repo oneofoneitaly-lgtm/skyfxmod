@@ -8,6 +8,7 @@ import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.network.FMLNetworkEvent;
@@ -70,7 +71,12 @@ public class Events {
     @SubscribeEvent
     public void onMouse(MouseEvent e) {
         if (mc.currentScreen != null) return;
-        if (e.buttonstate && e.button == 0) Mods.click(true);
+        if (e.buttonstate && e.button == 0) {
+            Mods.click(true);
+            for (Module m : Mods.ALL) {
+                if (m.enabled) m.leftClick();
+            }
+        }
         if (e.buttonstate && e.button == 1) Mods.click(false);
 
         Mods.Zoom z = Mods.ZOOM;
@@ -159,5 +165,12 @@ public class Events {
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload e) {
         if (e.world.isRemote) Mods.save();
+    }
+
+    @SuppressWarnings("rawtypes")
+    @SubscribeEvent
+    public void onLabel(RenderLivingEvent.Specials.Pre e) {
+        Module n = Mods.byId("nicktag");
+        if (n != null && n.enabled) ((NickTag) n).label(e.entity, e.x, e.y, e.z);
     }
 }

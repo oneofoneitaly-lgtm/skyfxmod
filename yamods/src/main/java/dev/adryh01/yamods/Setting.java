@@ -6,7 +6,7 @@ import java.util.Locale;
 /** One option of a module: on/off, slider, choice list or colour. */
 public class Setting {
 
-    public static final int BOOL = 0, SLIDER = 1, CHOICE = 2, COLOR = 3;
+    public static final int BOOL = 0, SLIDER = 1, CHOICE = 2, COLOR = 3, TEXT = 4;
 
     public static final int[] PALETTE = {0xFFFFFF, 0xFF5555, 0xFFAA00, 0xFFFF55, 0x55FF55, 0x55FFFF, 0x5599FF, 0xFF77FF, 0xAAAAAA};
     public static final String[] PALETTE_NAMES = {"White", "Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Pink", "Grey", "Rainbow"};
@@ -17,6 +17,8 @@ public class Setting {
     public float v, min, max, step = 1.0F;
     public int idx;
     public String[] opts;
+    public String s = "";
+    public int maxLen = 16;
 
     private Setting(String key, String label, int type) {
         this.key = key;
@@ -46,6 +48,13 @@ public class Setting {
         return s;
     }
 
+    public static Setting text(String key, String label, String def, int maxLen) {
+        Setting t = new Setting(key, label, TEXT);
+        t.s = def;
+        t.maxLen = maxLen;
+        return t;
+    }
+
     public static Setting color(String key, String label, int def) {
         Setting s = new Setting(key, label, COLOR);
         s.idx = def;
@@ -67,6 +76,8 @@ public class Setting {
                 return b ? "On" : "Off";
             case SLIDER:
                 return step >= 1.0F ? String.valueOf(Math.round(v)) : String.format(Locale.ROOT, "%.1f", v);
+            case TEXT:
+                return s.length() == 0 ? "-" : s;
             default:
                 return opts[idx];
         }
@@ -96,12 +107,19 @@ public class Setting {
                 return String.valueOf(b);
             case SLIDER:
                 return String.valueOf(v);
+            case TEXT:
+                return s;
             default:
                 return String.valueOf(idx);
         }
     }
 
-    public void load(String s) {
+    public void load(String str) {
+        if (type == TEXT) {
+            this.s = str.length() > maxLen ? str.substring(0, maxLen) : str;
+            return;
+        }
+        String s = str;
         try {
             switch (type) {
                 case BOOL:

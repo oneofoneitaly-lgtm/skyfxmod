@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "yamenu",
+    "name": "YA MENU",
+    "description": "YA CLIENT style for the Minecraft title screen, singleplayer and multiplayer menus.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["@Adryh01"],
+    "credits": "Made by @Adryh01",
+    "url": "https://www.tiktok.com/@adryhh__"
+  }
+]

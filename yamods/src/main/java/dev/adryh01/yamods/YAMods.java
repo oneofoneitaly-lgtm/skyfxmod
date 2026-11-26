@@ -1,6 +1,11 @@
 package dev.adryh01.yamods;
 
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.util.ChatComponentText;
+import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
@@ -36,5 +41,38 @@ public class YAMods {
         ClientRegistry.registerKeyBinding(menuKey);
         ClientRegistry.registerKeyBinding(zoomKey);
         MinecraftForge.EVENT_BUS.register(new Events());
+        ClientCommandHandler.instance.registerCommand(new CommandBase() {
+            @Override
+            public String getCommandName() {
+                return "yanick";
+            }
+
+            @Override
+            public String getCommandUsage(ICommandSender sender) {
+                return "/yanick <nickname>  (empty = real name)";
+            }
+
+            @Override
+            public int getRequiredPermissionLevel() {
+                return 0;
+            }
+
+            @Override
+            public boolean canCommandSenderUseCommand(ICommandSender sender) {
+                return true;
+            }
+
+            @Override
+            public void processCommand(ICommandSender sender, String[] args) throws CommandException {
+                Module m = Mods.byId("nicktag");
+                if (m == null) return;
+                String v = args.length == 0 ? "" : args[0];
+                if (v.length() > 16) v = v.substring(0, 16);
+                ((NickTag) m).nick.s = v;
+                if (v.length() > 0) m.setEnabled(true);
+                Mods.save();
+                sender.addChatMessage(new ChatComponentText("[YA MODS] " + (v.length() == 0 ? "Nickname removed." : "Nickname: " + v)));
+            }
+        });
     }
 }

@@ -110,6 +110,24 @@ final class Pvp {
             settings.add(power);
         }
 
+        /**
+         * Vanilla 1.8.9 throws away attack clicks while you block / eat / draw a bow. Like in 1.7 we let the
+         * click through: the arm swings and, if you aim at something, the hit is sent.
+         */
+        @Override
+        public void leftClick() {
+            EntityPlayerSP p = mc.thePlayer;
+            if (p == null || mc.currentScreen != null || !p.isUsingItem()) return;
+            ItemStack h = p.getHeldItem();
+            boolean blocking = h != null && h.getItem().getItemUseAction(h) == EnumAction.BLOCK;
+            if (blocking ? !blockHit.b : !useSwing.b) return;
+            p.swingItem();
+            MovingObjectPosition o = mc.objectMouseOver;
+            if (o != null && o.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && o.entityHit != null) {
+                mc.playerController.attackEntity(p, o.entityHit);
+            }
+        }
+
         @Override
         public void renderHand(float pt) {
             EntityPlayerSP p = mc.thePlayer;

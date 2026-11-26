@@ -257,6 +257,7 @@ final class Panels {
         final Setting heads = Setting.bool("heads", "Show heads", true);
         final Setting ping = Setting.choice("ping", "Ping", 0, "Bars", "Number", "Off");
         final Setting rows = Setting.slider("rows", "Rows per column", 20.0F, 8.0F, 30.0F, 1.0F);
+        final Setting logo = Setting.bool("logo", "YA logo next to every name", true);
 
         TabList() {
             super("tablist", "Tab List", "A cleaner tab list: scale, background, heads and ping style.", "Utility");
@@ -265,6 +266,7 @@ final class Panels {
             settings.add(heads);
             settings.add(ping);
             settings.add(rows);
+            settings.add(logo);
         }
 
         @Override
@@ -294,13 +296,16 @@ final class Panels {
             int cols = (n + perCol - 1) / perCol;
             int colW = 0;
             String[] names = new String[n];
+            Module nm = Mods.byId("nicktag");
+            String myNick = nm != null && nm.enabled ? ((NickTag) nm).nick.s : "";
             for (int i = 0; i < n; i++) {
                 names[i] = mc.ingameGUI.getTabList().getPlayerName(list.get(i));
+                if (myNick.length() > 0 && list.get(i).getGameProfile().getId().equals(mc.thePlayer.getUniqueID())) names[i] = myNick;
                 int w = fr.getStringWidth(names[i]);
                 if (obj != null) w += 4 + fr.getStringWidth(String.valueOf(sb.getValueFromObjective(list.get(i).getGameProfile().getName(), obj).getScorePoints()));
                 colW = Math.max(colW, w);
             }
-            colW += (heads.b ? 10 : 2) + (ping.idx == 0 ? 14 : (ping.idx == 1 ? fr.getStringWidth("999") + 4 : 2));
+            colW += (logo.b ? Logo.width(8) + 2 : 0) + (heads.b ? 10 : 2) + (ping.idx == 0 ? 14 : (ping.idx == 1 ? fr.getStringWidth("999") + 4 : 2));
             colW = Math.min(colW, (int) ((sw / scale.v - 20) / cols));
             int total = cols * colW + (cols - 1);
 
@@ -315,13 +320,17 @@ final class Panels {
                 int y = (i % perCol) * 9;
                 if (bg.b) Gui.drawRect(x, y, x + colW, y + 8, 0x20FFFFFF);
                 int tx = x + 1;
+                if (logo.b) {
+                    Logo.draw(tx, y, 8, 1.0F);
+                    tx += Logo.width(8) + 2;
+                }
                 if (heads.b) {
                     mc.getTextureManager().bindTexture(info.getLocationSkin());
                     GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-                    Gui.drawScaledCustomSizeModalRect(x + 1, y, 8.0F, 8.0F, 8, 8, 8, 8, 64.0F, 64.0F);
+                    Gui.drawScaledCustomSizeModalRect(tx, y, 8.0F, 8.0F, 8, 8, 8, 8, 64.0F, 64.0F);
                     EntityPlayer ep = mc.theWorld.getPlayerEntityByUUID(info.getGameProfile().getId());
                     if (ep != null && ep.isWearing(EnumPlayerModelParts.HAT)) {
-                        Gui.drawScaledCustomSizeModalRect(x + 1, y, 40.0F, 8.0F, 8, 8, 8, 8, 64.0F, 64.0F);
+                        Gui.drawScaledCustomSizeModalRect(tx, y, 40.0F, 8.0F, 8, 8, 8, 8, 64.0F, 64.0F);
                     }
                     tx += 9;
                 }

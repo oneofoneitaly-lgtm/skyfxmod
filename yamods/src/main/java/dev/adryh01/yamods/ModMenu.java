@@ -22,7 +22,8 @@ public class ModMenu extends GuiScreen {
     private String category = "All";
     private final List<Module> shown = new ArrayList<Module>();
     private Module open;          // module whose settings page is shown
-    private Setting dragging;     // slider being dragged
+    private Setting dragging;
+    private Setting editing;      // text setting being typed into     // slider being dragged
     private float scroll, scrollTarget, gridScroll;
     private long openTime;
 
@@ -214,6 +215,15 @@ public class ModMenu extends GuiScreen {
                     fr.drawString(v, right - fr.getStringWidth(v), y + 7, UI.MID);
                     break;
                 }
+                case Setting.TEXT: {
+                    int bw = 106;
+                    boolean ed = editing == s;
+                    UI.roundBox(right - bw, y + 3, right, y + 17, 5, ed ? UI.ACCENT : UI.BORDER, 0xFFFFFFFF, 1);
+                    String v = s.s.length() == 0 && !ed ? "click to type" : s.s;
+                    if (ed && (System.currentTimeMillis() / 500) % 2 == 0) v += "_";
+                    fr.drawString(fr.trimStringToWidth(v, bw - 8, true), right - bw + 5, y + 7, s.s.length() == 0 && !ed ? UI.SOFT : UI.DARK);
+                    break;
+                }
                 default: {
                     int bw = 106;
                     UI.roundRect(right - bw, y + 3, right, y + 17, 5, UI.CHIP);
@@ -294,6 +304,7 @@ public class ModMenu extends GuiScreen {
     }
 
     private void clickSettings(int mx, int my, int button) {
+        editing = null;
         if (button == 0 && mx >= gx && mx < gx + 52 && my >= py + 43 && my < py + 59) {
             closeSettings();
             click();
@@ -319,6 +330,8 @@ public class ModMenu extends GuiScreen {
                         dragging = s;
                         sliderTo(s, mx);
                     }
+                } else if (s.type == Setting.TEXT) {
+                    if (mx >= right - 106) editing = s;
                 } else if (mx >= right - 106) {
                     s.cycle(button == 1 ? -1 : 1);
                     Mods.save();
@@ -351,6 +364,17 @@ public class ModMenu extends GuiScreen {
 
     @Override
     protected void keyTyped(char c, int key) throws IOException {
+        if (editing != null) {
+            if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_ESCAPE) {
+                editing = null;
+                Mods.save();
+            } else if (key == Keyboard.KEY_BACK) {
+                if (editing.s.length() > 0) editing.s = editing.s.substring(0, editing.s.length() - 1);
+            } else if (net.minecraft.util.ChatAllowedCharacters.isAllowedCharacter(c) && editing.s.length() < editing.maxLen) {
+                editing.s += c;
+            }
+            return;
+        }
         if (key == Keyboard.KEY_RSHIFT) {
             mc.displayGuiScreen(null);
             return;

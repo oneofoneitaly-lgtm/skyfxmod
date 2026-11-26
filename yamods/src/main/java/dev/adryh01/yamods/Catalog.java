@@ -306,6 +306,7 @@ final class Catalog {
         all.add(new Fx.InventoryHud());
 
         // ------------------------------------------------------------ Visual
+        all.add(new NickTag());
         all.add(new Pvp.BlockOutline());
         all.add(new Pvp.TimeChanger());
         all.add(new Pvp.ClearWeather());

@@ -100,6 +100,10 @@ public abstract class Module {
     public void chat(ClientChatReceivedEvent e) {
     }
 
+    /** Left mouse button pressed while no screen is open. */
+    public void leftClick() {
+    }
+
     /** Full-screen drawing that is not a HUD box (crosshair, low health border...). */
     public void renderOverlay(int sw, int sh) {
     }
