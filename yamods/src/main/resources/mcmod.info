@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "yamods",
+    "name": "YA MODS",
+    "description": "YA MODS: every YA Client module that exists in 1.8.9 (HUD, PvP, utility, visual) in one menu. Right Shift opens it.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["@Adryh01"],
+    "credits": "Made by @Adryh01",
+    "url": "https://www.tiktok.com/@adryhh__"
+  }
+]
