@@ -46,11 +46,12 @@ final class YaNet {
 
     private static final java.util.Map<String, Boolean> CAPES = new java.util.concurrent.ConcurrentHashMap<String, Boolean>();
 
-    /** True when the player claimed the free YA Cape on the website (the lookup is shared with uses()). */
+    /** True when the player owns the free YA Cape (claimed on the website). Works for yourself too. */
     static boolean hasCape(UUID id) {
         if (id == null) return false;
-        uses(id);
-        Boolean c = CAPES.get(id.toString().replace("-", ""));
+        String key = id.toString().replace("-", "");
+        refresh(key);
+        Boolean c = CAPES.get(key);
         return c != null && c;
     }
 
@@ -59,6 +60,13 @@ final class YaNet {
         if (id == null) return false;
         if (mc.thePlayer != null && id.equals(mc.thePlayer.getUniqueID())) return true;
         final String key = id.toString().replace("-", "");
+        refresh(key);
+        Boolean flag = FLAGS.get(key);
+        return flag != null && flag;
+    }
+
+    /** Looks the player up in the background (at most every few seconds). */
+    private static void refresh(final String key) {
         Boolean flag = FLAGS.get(key);
         Long at = FETCHED.get(key);
         long ttl = flag != null && flag ? 5000L : 30000L;
@@ -82,7 +90,6 @@ final class YaNet {
             t.setDaemon(true);
             t.start();
         }
-        return flag != null && flag;
     }
 
     /** Call every client tick: keeps our own "I run the client" flag alive while we are in a world. */
