@@ -3,12 +3,9 @@ package dev.adryh01.yafabric;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.options.OptionsScreen;
 import net.minecraft.client.gui.screen.world.SelectWorldScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.font.TextRenderer;
-
-import java.io.IOException;
 
 /**
  * The YA home screen on Fabric (stage 1): top bar with tabs and a Play panel, same look as the Forge test home.
@@ -78,16 +75,16 @@ public class YAHome extends Screen {
     }
 
     @Override
-    protected void mouseClicked(int mx, int my, int button) throws IOException {
+    protected void mouseClicked(int mx, int my, int button) {
         super.mouseClicked(mx, my, button);
         if (button != 0) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         for (int i = 0; i < TABS.length; i++) {
             int x = tabX(i), w = font().getStringWidth(TABS[i]);
             if (!in(mx, my, x - 8, 6, w + 16, 24)) continue;
-            if (i == 1) mc.openScreen(new MultiplayerScreen(this));
-            else if (i == 2) mc.openScreen(new SelectWorldScreen(this));
-            else if (i == 3) mc.openScreen(new OptionsScreen(this, mc.options));
+            if (i == 1) mc.setScreen(new MultiplayerScreen(this));
+            else if (i == 2) mc.setScreen(new SelectWorldScreen(this));
+            else if (i == 3) mc.setScreen(new OptionsScreen(this, mc.options));
             return;
         }
         if (in(mx, my, width - 34, 5, 24, 24)) {
@@ -95,12 +92,12 @@ public class YAHome extends Screen {
             return;
         }
         int pw = 190, ph = 110, px = width - pw - 14, py = height - ph - 14;
-        if (in(mx, my, px + 8, py + 34, pw - 16, 28)) mc.openScreen(new MultiplayerScreen(this));
-        else if (in(mx, my, px + 8, py + 70, pw - 16, 28)) mc.openScreen(new SelectWorldScreen(this));
+        if (in(mx, my, px + 8, py + 34, pw - 16, 28)) mc.setScreen(new MultiplayerScreen(this));
+        else if (in(mx, my, px + 8, py + 70, pw - 16, 28)) mc.setScreen(new SelectWorldScreen(this));
     }
 
     @Override
-    protected void keyPressed(char c, int key) throws IOException {
+    protected void keyPressed(char c, int key) {
         // title screen: Esc does nothing
     }
 }
