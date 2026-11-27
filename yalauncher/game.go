@@ -306,7 +306,8 @@ func install(p progressFn, loader string) (*installed, error) {
 		for _, l := range fp.Libraries {
 			name, base := l.Name, l.URL
 			rel := mavenPath(name)
-			if rel == "" {
+			// Minecraft 1.8.9 already ships its own LWJGL (with natives): the patched copy is not needed
+			if rel == "" || strings.HasPrefix(name, "org.lwjgl.lwjgl:") || strings.HasPrefix(name, "org.lwjgl:") {
 				continue
 			}
 			dest := filepath.Join(libsDir, filepath.FromSlash(rel))
