@@ -89,6 +89,26 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
 .ni .top{display:flex;align-items:center;gap:8px;margin-bottom:3px}.ni b{flex:1;font-weight:600}.ni .d{font-size:11px;color:#aaa}
 .tg{font-size:9.5px;letter-spacing:.8px;padding:2px 7px;border-radius:5px;background:#1f1f1f;color:#fff;font-weight:600}
 .ni p{font-size:12.5px;color:#6b6b6b;margin:0}
+
+.page#p-play{padding:22px 24px}
+.playgrid{display:grid;grid-template-columns:318px 1fr;gap:18px;flex:1;min-height:0}
+.pl{display:flex;flex-direction:column;gap:12px;min-height:0}.pr{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
+.pl .hero2{padding:20px 22px}.pl .hero2 h1{font-size:25px;margin:0 0 12px}.pl .hero2 img{width:64px;height:64px}
+.lcard{padding:12px 14px}.lsel{display:flex;flex-direction:column;gap:8px}
+.lo{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border-radius:11px;border:1px solid #d6d6d6;background:#fff;position:relative}
+.lo:hover{border-color:#3a3a3a;background:#f7f7f7}
+.lo .lb{width:34px;height:34px;border-radius:9px;background:#ececec;color:#3a3a3a;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px}
+.lo .lx{display:flex;flex-direction:column;min-width:0}.lo .lt{font-weight:600;font-size:14px}.lo .ls{font-size:11.5px;color:#8a8a8a}
+.lo .lk{position:absolute;right:12px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;border:2px solid #cfcfcf}
+.lo.on{background:#2b2b2b;border-color:#2b2b2b;color:#fff}.lo.on .lb{background:rgba(255,255,255,.16);color:#fff}.lo.on .ls{color:#bdbdbd}
+.lo.on .lk{border-color:#fff;background:radial-gradient(circle,#fff 0 38%,transparent 42%)}
+.nhead{display:flex;align-items:center;gap:8px}.ncount{font-size:11px;color:#9a9a9a;margin-right:4px}
+.narr{width:28px;height:28px;padding:0;border-radius:50%;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
+.pr .news{flex:1;flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:12px;padding:0 0 8px;scroll-snap-type:x mandatory;scroll-behavior:smooth}
+.pr .news::-webkit-scrollbar{height:6px}.pr .news::-webkit-scrollbar-thumb{background:#d0d0d0;border-radius:3px}
+.pr .ni{flex:0 0 100%;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;scroll-snap-align:start}
+.pr .nimg{width:100%;height:170px;border-radius:0}
+.pr .nb{padding:14px 16px;overflow:auto}.pr .ni .top{flex-wrap:wrap}.pr .ni p{font-size:13px;line-height:1.5}
 </style></head><body>
 <div class="side">
   <img id="logo" class="logo" alt="YA">
@@ -104,16 +124,29 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
 <div class="main">
   <!-- PLAY -->
   <div class="page on" id="p-play">
-    <div class="hero2">
-      <div class="hl"><div class="chip">MINECRAFT 1.8.9 &middot; FORGE</div><h1>Ready to play,<br><span id="hname">player</span>.</h1>
-        <div class="chips"><span class="c" id="cMods"></span><span class="c" id="cRam"></span></div></div>
-      <img id="logo2" alt="">
+    <div class="playgrid">
+      <div class="pl">
+        <div class="hero2">
+          <div class="hl"><h1>Ready to play,<br><span id="hname">player</span>.</h1>
+            <div class="chips"><span class="c" id="cMods"></span><span class="c" id="cRam"></span></div></div>
+          <img id="logo2" alt="">
+        </div>
+        <div class="card lcard"><div class="label">GAME LOADER &middot; MINECRAFT 1.8.9</div>
+          <div class="lsel">
+            <button class="lo" id="pl-forge"><span class="lb">F</span><span class="lx"><span class="lt">Forge</span><span class="ls">Stable &middot; every YA mod</span></span><i class="lk"></i></button>
+            <button class="lo" id="pl-fabric"><span class="lb">Fa</span><span class="lx"><span class="lt">Fabric</span><span class="ls">Lightweight &middot; beta</span></span><i class="lk"></i></button>
+          </div></div>
+        <div class="card gc"><div class="label">ACCOUNT</div><div id="acc"></div></div>
+        <div class="grow"></div>
+        <div class="dock"><div class="bar" id="bar"><i id="fill"></i></div><div class="msg" id="msg"></div>
+          <div class="row"><button class="primary play" id="play" onclick="doPlay()">LAUNCH GAME</button></div></div>
+      </div>
+      <div class="pr">
+        <div class="nhead"><span class="label" style="margin:0">NEWS</span><span class="grow"></span><span class="ncount" id="ncount"></span>
+          <button class="narr" onclick="nscroll(-1)" aria-label="Previous">&#8249;</button><button class="narr" onclick="nscroll(1)" aria-label="Next">&#8250;</button></div>
+        <div class="news" id="news"><div class="sub">Loading news...</div></div>
+      </div>
     </div>
-    <div class="card gc"><div class="label">ACCOUNT</div><div id="acc"></div></div>
-    <div class="newshead"><span class="label" style="margin:0">NEWS</span></div>
-    <div class="news" id="news"><div class="sub">Loading news...</div></div>
-    <div class="dock"><div class="bar" id="bar"><i id="fill"></i></div><div class="msg" id="msg"></div>
-      <div class="row"><button class="primary play" id="play" onclick="doPlay()">LAUNCH GAME</button></div></div>
   </div>
   <!-- MODS -->
   <div class="page" id="p-mods">
@@ -207,13 +240,19 @@ async function loadNews(){let n=[];try{n=JSON.parse(await getRemote("news"))}cat
   n.forEach(x=>{const d=document.createElement("div");d.className="ni";d.innerHTML='<img class="nimg"><div class="nb"><div class="top"><b></b><span class="d"></span></div><p></p></div>';
     const im=d.querySelector(".nimg");if(x.image){im.src=/^https?:/.test(x.image)?x.image:"https://raw.githubusercontent.com/"+S.repo+"/HEAD/data/images/"+x.image;im.onerror=()=>im.remove()}else im.remove();
     if(x.tag){const t=document.createElement("span");t.className="tg";t.textContent=x.tag;d.querySelector(".top").prepend(t)}
-    d.querySelector("b").textContent=x.title||"";d.querySelector(".d").textContent=x.date||"";d.querySelector("p").textContent=x.text||"";el.appendChild(d)})}
-function renderLoader(){const f=S.loader==="fabric";$("ld-fabric").className=f?"primary":"";$("ld-forge").className=f?"":"primary"}
+    d.querySelector("b").textContent=x.title||"";d.querySelector(".d").textContent=x.date||"";d.querySelector("p").textContent=x.text||"";el.appendChild(d)});ncount()}
+function renderLoader(){const f=S.loader==="fabric";
+  [["ld-fabric",f],["ld-forge",!f]].forEach(([i,on])=>{const e=$(i);if(e)e.className=on?"primary":""});
+  [["pl-fabric",f],["pl-forge",!f]].forEach(([i,on])=>{const e=$(i);if(e)e.className="lo"+(on?" on":"")})}
+function nscroll(d){const el=$("news");el.scrollBy({left:d*el.clientWidth,behavior:"smooth"})}
+function ncount(){const el=$("news"),n=el.querySelectorAll(".ni").length,c=$("ncount");if(!c)return;c.textContent=n?(Math.min(n,Math.round(el.scrollLeft/Math.max(1,el.clientWidth))+1)+" / "+n):""}
+(function(){const el=$("news");let lock=0;el.addEventListener("scroll",ncount);
+  el.addEventListener("wheel",e=>{if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){e.preventDefault();const t=Date.now();if(t-lock>380){lock=t;nscroll(e.deltaY>0?1:-1)}}},{passive:false})})();
 function renderSet(){renderLoader();$("ram").value=S.ram;ramLabel();$("fs").classList.toggle("on",S.fullscreen);$("co").classList.toggle("on",S.closeOnPlay);
   $("w").value=S.width||0;$("h").value=S.height||0;$("jp").value=S.javaPath||"";$("jvm").value=S.jvm||"";$("dd").textContent=S.dataDir}
 function ramLabel(){$("ramv").textContent=(($("ram").value/1024).toFixed(1))+" GB of memory for Minecraft"}
 $("ram").oninput=()=>{ramLabel();setRam(parseInt($("ram").value));S.ram=parseInt($("ram").value)};
-$("ld-forge").onclick=async()=>{await setLoader("forge");await reload();renderAll()};$("ld-fabric").onclick=async()=>{await setLoader("fabric");await reload();renderAll()};$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
+const pickLoader=l=>async()=>{if(S.loader===l)return;await setLoader(l);await reload();renderAll()};$("ld-forge").onclick=$("pl-forge").onclick=pickLoader("forge");$("ld-fabric").onclick=$("pl-fabric").onclick=pickLoader("fabric");$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
 async function saveSet(){saveSettings(JSON.stringify({javaPath:$("jp").value,jvm:$("jvm").value,closeOnPlay:$("co").classList.contains("on"),fullscreen:$("fs").classList.contains("on"),width:parseInt($("w").value)||0,height:parseInt($("h").value)||0}));
   await reload();$("setMsg").textContent="Saved.";setTimeout(()=>$("setMsg").textContent="",1800)}
 async function loadLog(){$("log").textContent=await getLog();$("log").scrollTop=1e9}
