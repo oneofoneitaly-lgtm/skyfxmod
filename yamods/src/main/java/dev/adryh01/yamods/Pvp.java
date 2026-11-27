@@ -116,25 +116,35 @@ final class Pvp {
          */
         private boolean wasDown;
         private long lastSwing;
+        private static final long SWING_MS = 300L;
 
-        /** Backup for clicks that never reach the mouse event: watch the attack button every tick. */
-        @Override
-        public void onTick() {
+        private boolean active() {
+            EntityPlayerSP p = mc.thePlayer;
+            if (p == null || !p.isUsingItem()) return false;
+            ItemStack h = p.getHeldItem();
+            boolean blocking = h != null && h.getItem().getItemUseAction(h) == EnumAction.BLOCK;
+            return blocking ? blockHit.b : useSwing.b;
+        }
+
+        /** Attack button edge, checked from every possible place (mouse event, tick and every frame). */
+        private void poll() {
             boolean down = org.lwjgl.input.Mouse.isButtonDown(0);
             if (down && !wasDown && mc.currentScreen == null) leftClick();
             wasDown = down;
         }
 
         @Override
+        public void onTick() {
+            poll();
+        }
+
+        @Override
         public void leftClick() {
             long now = System.currentTimeMillis();
-            if (now - lastSwing < 120L) return; // the mouse event and the tick check saw the same click
+            if (now - lastSwing < 120L) return; // the same click seen twice
             EntityPlayerSP p = mc.thePlayer;
-            if (p == null || mc.currentScreen != null || !p.isUsingItem()) return;
+            if (p == null || mc.currentScreen != null || !active()) return;
             lastSwing = now;
-            ItemStack h = p.getHeldItem();
-            boolean blocking = h != null && h.getItem().getItemUseAction(h) == EnumAction.BLOCK;
-            if (blocking ? !blockHit.b : !useSwing.b) return;
             p.swingItem();
             MovingObjectPosition o = mc.objectMouseOver;
             if (o != null && o.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && o.entityHit != null) {
@@ -144,17 +154,14 @@ final class Pvp {
 
         @Override
         public void renderHand(float pt) {
-            EntityPlayerSP p = mc.thePlayer;
-            if (p == null || !p.isUsingItem()) return;
-            ItemStack h = p.getHeldItem();
-            boolean blocking = h != null && h.getItem().getItemUseAction(h) == EnumAction.BLOCK;
-            if (blocking ? !blockHit.b : !useSwing.b) return;
-            float sp = p.getSwingProgress(pt);
-            if (sp <= 0.0F) return;
+            poll();
+            if (!active()) return;
+            // our own swing clock: the vanilla swing progress is ignored by the item renderer while using an item
+            float sp = (System.currentTimeMillis() - lastSwing) / (float) SWING_MS;
+            if (lastSwing == 0L || sp <= 0.0F || sp >= 1.0F) return;
             float k = power.v;
             float f = (float) Math.sin(sp * sp * Math.PI);
             float f1 = (float) Math.sin(Math.sqrt(sp) * Math.PI);
-            // same movement the vanilla item renderer uses for a normal swing
             GlStateManager.translate(-f1 * 0.4F * k, (float) Math.sin(Math.sqrt(sp) * Math.PI * 2.0D) * 0.2F * k,
                     (float) -Math.sin(sp * Math.PI) * 0.2F * k);
             GlStateManager.translate(0.56F, -0.52F, -0.72F);

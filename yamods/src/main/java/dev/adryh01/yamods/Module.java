@@ -89,6 +89,13 @@ public abstract class Module {
     public void camera(EntityViewRenderEvent.CameraSetup e) {
     }
 
+    /** Start / end of a rendered frame (the whole game render, before and after the camera update). */
+    public void renderTickStart() {
+    }
+
+    public void renderTickEnd() {
+    }
+
     /** Runs right before the first-person hand is drawn; GL changes apply to the hand. */
     public void renderHand(float partialTicks) {
     }

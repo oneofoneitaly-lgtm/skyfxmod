@@ -30,7 +30,7 @@ public class Events {
         if (e.phase != TickEvent.Phase.END) return;
 
         if (YAMods.menuKey.isPressed() && mc.currentScreen == null && mc.thePlayer != null) {
-            mc.displayGuiScreen(new ModMenu());
+            mc.displayGuiScreen(new YAHub());
         }
         if (++saveTimer >= 600) { // every 30 seconds, only writes when something changed
             saveTimer = 0;
@@ -39,7 +39,7 @@ public class Events {
         if (mc.thePlayer == null) return;
         Q.tick(mc.thePlayer);
         YaNet.tick();
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_TICK) {
             if (m.enabled) m.onTick();
         }
         // let the zoom ease out even after the module is switched off
@@ -74,7 +74,7 @@ public class Events {
         if (mc.currentScreen != null) return;
         if (e.buttonstate && e.button == 0) {
             Mods.click(true);
-            for (Module m : Mods.ALL) {
+            for (Module m : Mods.H_CLICK) {
                 if (m.enabled) m.leftClick();
             }
         }
@@ -91,7 +91,7 @@ public class Events {
     public void onAttack(AttackEntityEvent e) {
         if (e.entityPlayer != mc.thePlayer || !(e.target instanceof EntityLivingBase)) return;
         Q.hit(e.target);
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_ATTACK) {
             if (m.enabled) m.attacked(e.target);
         }
         Module sp = Mods.byId("hitsparks");
@@ -121,14 +121,14 @@ public class Events {
     @SubscribeEvent
     public void onWorldLast(RenderWorldLastEvent e) {
         if (mc.thePlayer == null) return;
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_WORLD) {
             if (m.enabled) m.renderWorld(e.partialTicks);
         }
     }
 
     @SubscribeEvent
     public void onBlockHighlight(DrawBlockHighlightEvent e) {
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_BLOCK) {
             if (m.enabled && m.drawBlock(e)) {
                 e.setCanceled(true);
                 return;
@@ -137,22 +137,31 @@ public class Events {
     }
 
     @SubscribeEvent
+    public void onRenderTick(TickEvent.RenderTickEvent e) {
+        if (e.phase == TickEvent.Phase.START) {
+            if (Mods.FREELOOK.enabled) Mods.FREELOOK.renderTickStart();
+        } else {
+            Mods.FREELOOK.renderTickEnd(); // always, so the real rotation is restored even if the module was just switched off
+        }
+    }
+
+    @SubscribeEvent
     public void onCamera(EntityViewRenderEvent.CameraSetup e) {
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_CAMERA) {
             if (m.enabled) m.camera(e);
         }
     }
 
     @SubscribeEvent
     public void onHand(RenderHandEvent e) {
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_HAND) {
             if (m.enabled) m.renderHand(e.partialTicks);
         }
     }
 
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent e) {
-        for (Module m : Mods.ALL) {
+        for (Module m : Mods.H_CHAT) {
             if (m.enabled) m.chat(e);
         }
     }

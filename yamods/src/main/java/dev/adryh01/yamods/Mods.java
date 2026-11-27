@@ -38,6 +38,7 @@ public final class Mods {
     static final ArrayDeque<Long> RIGHT = new ArrayDeque<Long>();
     static float lastReach = -1.0F;
     static final Zoom ZOOM = new Zoom();
+    static final Freelook FREELOOK = new Freelook();
     static boolean rainbow;
 
     private Mods() {
@@ -57,18 +58,49 @@ public final class Mods {
         ALL.add(new Reach());
         ALL.add(new ToggleSprint());
         ALL.add(ZOOM);
+        ALL.add(FREELOOK);
+        ALL.add(new ClientCape());
+        ALL.add(new Boost());
         ALL.add(new Fullbright());
         ALL.add(new HideFire());
         Catalog.register(ALL);
+        buildHooks();
         load();
         saveOnExit();
     }
 
-    public static Module byId(String id) {
+    private static final java.util.HashMap<String, Module> BY_ID = new java.util.HashMap<String, Module>();
+    /** Only the modules that really override a hook are called for it (no empty calls 114 times a frame). */
+    static Module[] H_TICK = new Module[0], H_WORLD = H_TICK, H_BLOCK = H_TICK, H_CAMERA = H_TICK, H_HAND = H_TICK,
+            H_CHAT = H_TICK, H_CLICK = H_TICK, H_ATTACK = H_TICK;
+
+    private static Module[] hook(String name, Class<?>... args) {
+        List<Module> out = new ArrayList<Module>();
         for (Module m : ALL) {
-            if (m.id.equals(id)) return m;
+            try {
+                if (m.getClass().getMethod(name, args).getDeclaringClass() != Module.class) out.add(m);
+            } catch (Exception e) {
+                out.add(m);
+            }
         }
-        return null;
+        return out.toArray(new Module[out.size()]);
+    }
+
+    static void buildHooks() {
+        BY_ID.clear();
+        for (Module m : ALL) BY_ID.put(m.id, m);
+        H_TICK = hook("onTick");
+        H_WORLD = hook("renderWorld", float.class);
+        H_BLOCK = hook("drawBlock", net.minecraftforge.client.event.DrawBlockHighlightEvent.class);
+        H_CAMERA = hook("camera", net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup.class);
+        H_HAND = hook("renderHand", float.class);
+        H_CHAT = hook("chat", net.minecraftforge.client.event.ClientChatReceivedEvent.class);
+        H_CLICK = hook("leftClick");
+        H_ATTACK = hook("attacked", net.minecraft.entity.Entity.class);
+    }
+
+    public static Module byId(String id) {
+        return BY_ID.get(id);
     }
 
     // ------------------------------------------------------------ persistence
@@ -558,6 +590,89 @@ public final class Mods {
                 mc.gameSettings.smoothCamera = prevSmooth;
                 changedSmooth = false;
             }
+        }
+    }
+
+    /** Hold a key (Left Alt) and move the mouse to look around while your character keeps facing the same way. */
+    static class Freelook extends Module {
+        final Setting third = Setting.bool("third", "Third person while looking", true);
+        final Setting invert = Setting.bool("invert", "Invert vertical look", false);
+        float camYaw, camPitch, startPitch, realYaw, realPitch, realPrevYaw, realPrevPitch;
+        boolean active, swapped, changedView;
+        int prevView;
+
+        Freelook() {
+            super("freelook", "Freelook", "Hold the Freelook key (Left Alt) to look around without turning your character.", "Utility");
+            settings.add(third);
+            settings.add(invert);
+        }
+
+        @Override
+        public void onTick() {
+            EntityPlayerSP p = mc.thePlayer;
+            boolean down = p != null && mc.currentScreen == null && YAMods.freelookKey != null && YAMods.freelookKey.isKeyDown();
+            if (down && !active) {
+                active = true;
+                camYaw = p.rotationYaw;
+                camPitch = p.rotationPitch;
+                prevView = mc.gameSettings.thirdPersonView;
+                if (third.b && prevView == 0) {
+                    mc.gameSettings.thirdPersonView = 1;
+                    changedView = true;
+                }
+            } else if (!down && active) {
+                stop();
+            }
+        }
+
+        private void stop() {
+            active = false;
+            if (changedView) {
+                mc.gameSettings.thirdPersonView = prevView;
+                changedView = false;
+            }
+        }
+
+        @Override
+        public void onDisable() {
+            stop();
+        }
+
+        /** Before the frame: the camera reads the player's rotation, so give it the free-look angles. */
+        @Override
+        public void renderTickStart() {
+            EntityPlayerSP p = mc.thePlayer;
+            if (!active || p == null || swapped) return;
+            realYaw = p.rotationYaw;
+            realPitch = p.rotationPitch;
+            realPrevYaw = p.prevRotationYaw;
+            realPrevPitch = p.prevRotationPitch;
+            p.rotationYaw = camYaw;
+            p.prevRotationYaw = camYaw;
+            p.rotationPitch = camPitch;
+            p.prevRotationPitch = camPitch;
+            startPitch = camPitch;
+            swapped = true;
+        }
+
+        /** After the frame: keep the mouse movement as camera movement and give the player back its real rotation. */
+        @Override
+        public void renderTickEnd() {
+            EntityPlayerSP p = mc.thePlayer;
+            if (!swapped || p == null) {
+                swapped = false;
+                return;
+            }
+            swapped = false;
+            camYaw = p.rotationYaw;
+            float dp = p.rotationPitch - startPitch;
+            camPitch = startPitch + (invert.b ? -dp : dp);
+            if (camPitch > 90.0F) camPitch = 90.0F;
+            if (camPitch < -90.0F) camPitch = -90.0F;
+            p.rotationYaw = realYaw;
+            p.rotationPitch = realPitch;
+            p.prevRotationYaw = realPrevYaw;
+            p.prevRotationPitch = realPrevPitch;
         }
     }
 

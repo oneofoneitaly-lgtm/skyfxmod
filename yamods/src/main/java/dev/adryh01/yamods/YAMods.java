@@ -28,6 +28,7 @@ public class YAMods {
 
     public static KeyBinding menuKey;
     public static KeyBinding zoomKey;
+    public static KeyBinding freelookKey;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent e) {
@@ -39,7 +40,10 @@ public class YAMods {
         menuKey = new KeyBinding("Open YA MODS menu", Keyboard.KEY_RSHIFT, "YA MODS");
         zoomKey = new KeyBinding("Zoom", Keyboard.KEY_C, "YA MODS");
         ClientRegistry.registerKeyBinding(menuKey);
+        freelookKey = new KeyBinding("Freelook", Keyboard.KEY_LMENU, "YA MODS");
         ClientRegistry.registerKeyBinding(zoomKey);
+        ClientRegistry.registerKeyBinding(freelookKey);
+        ClientCape.installAll();
         MinecraftForge.EVENT_BUS.register(new Events());
         ClientCommandHandler.instance.registerCommand(new CommandBase() {
             @Override
