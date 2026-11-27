@@ -40,7 +40,6 @@ var modCatalog = []modInfo{
 	{"yamods", "YA MODS", "112 PvP, HUD and utility modules. Right Shift opens the menu.", "YAMods.jar", ""},
 	{"yamenu", "YA MENU", "YA CLIENT style for the title screen, singleplayer, multiplayer and pause menu.", "YAMenu.jar", ""},
 	{"skyfx", "SkyFX", "Custom animated skies.", "SkyFX.jar", ""},
-	{"yafabric", "YA CLIENT (Fabric)", "The YA CLIENT mods for the Fabric loader (test build: YA home screen so far).", "YAFabric.jar", "fabric"},
 }
 
 type server struct {
@@ -171,6 +170,7 @@ func main() {
 	})
 	w.Bind("logout", func() { st.Account = nil; st.save() })
 	w.Bind("setMod", func(id string, on bool) { st.Mods[id] = on; st.save() })
+	st.Loader = "forge" // Fabric was dropped: Forge only
 	w.Bind("setLoader", func(l string) {
 		if l != "fabric" {
 			l = "forge"

@@ -109,6 +109,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
 .pr .ni{flex:0 0 100%;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;scroll-snap-align:start}
 .pr .nimg{width:100%;height:170px;border-radius:0}
 .pr .nb{padding:14px 16px;overflow:auto}.pr .ni .top{flex-wrap:wrap}.pr .ni p{font-size:13px;line-height:1.5}
+.popti{display:flex;flex-direction:column;gap:4px}.popti b{font-size:14px}.popti span{font-size:12px;color:#8a8a8a}.popti button{margin-top:6px;align-self:flex-start}
 </style></head><body>
 <div class="side">
   <img id="logo" class="logo" alt="YA">
@@ -131,11 +132,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
             <div class="chips"><span class="c" id="cMods"></span><span class="c" id="cRam"></span></div></div>
           <img id="logo2" alt="">
         </div>
-        <div class="card lcard"><div class="label">GAME LOADER &middot; MINECRAFT 1.8.9</div>
-          <div class="lsel">
-            <button class="lo" id="pl-forge"><span class="lb">F</span><span class="lx"><span class="lt">Forge</span><span class="ls">Stable &middot; every YA mod</span></span><i class="lk"></i></button>
-            <button class="lo" id="pl-fabric"><span class="lb">Fa</span><span class="lx"><span class="lt">Fabric</span><span class="ls">Lightweight &middot; beta</span></span><i class="lk"></i></button>
-          </div></div>
+        <div class="card lcard"><div class="label">PERFORMANCE</div><div id="popti" class="popti"></div></div>
         <div class="card gc"><div class="label">ACCOUNT</div><div id="acc"></div></div>
         <div class="grow"></div>
         <div class="dock"><div class="bar" id="bar"><i id="fill"></i></div><div class="msg" id="msg"></div>
@@ -165,7 +162,6 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
     <h1>Settings</h1>
     <div class="card">
       <div class="set"><div class="t"><b>Memory (RAM)</b><span id="ramv"></span></div><input id="ram" type="range" min="1024" max="8192" step="512"></div>
-      <div class="set"><div class="t"><b>Game loader</b><span>Forge is the stable one. Fabric is lighter (test build: the YA mods are being ported).</span></div><div class="row" style="gap:6px"><button id="ld-forge">Forge</button><button id="ld-fabric">Fabric</button></div></div>
       <div class="set"><div class="t"><b>Fullscreen</b><span>Start the game in fullscreen.</span></div><div class="sw" id="fs"></div></div>
       <div class="set"><div class="t"><b>Window size</b><span>Used when not fullscreen (0 = default).</span></div><input id="w" type="number" style="width:84px" min="0"><input id="h" type="number" style="width:84px" min="0"></div>
       <div class="set"><div class="t"><b>Close the launcher when the game starts</b></div><div class="sw" id="co"></div></div>
@@ -213,7 +209,7 @@ async function doLogout(){await logout();await reload();renderAll()}
 
 let OPT={installed:"",found:""};
 async function optRefresh(){try{OPT=JSON.parse(await optifineState())}catch(e){}renderOpti()}
-function renderOpti(){const el=$("opti");if(!el)return;
+function renderOpti(){const pe=$("popti");if(pe)pe.innerHTML=OPT.installed?'<b>OptiFine installed</b><span>Maximum FPS.</span>':'<b>OptiFine not installed</b><span>Install it from Mods for far more FPS.</span><button onclick="show(\'mods\')">Open Mods</button>';const el=$("opti");if(!el)return;
   if(OPT.installed){el.innerHTML='<div class="t"><b>OptiFine is installed</b><span></span></div>';el.querySelector("span").textContent=OPT.installed+" - more FPS, shaders and zoom.";return}
   el.innerHTML='<div class="t"><b>OptiFine (more FPS)</b><span style="white-space:normal">Not installed. It makes the game much faster. 1) Open the official page and download "OptiFine 1.8.9 HD U M5". 2) Come back here: it is added by itself.</span></div><div class="row" style="margin-top:10px"><button class="primary" id="oo">Open the official page</button>'+(OPT.found?'<button id="oi">Install the downloaded file</button>':'')+'</div><div class="sub" id="om" style="margin-top:8px"></div>';
   $("oo").onclick=()=>openLink("https://optifine.net/downloads");
@@ -241,9 +237,7 @@ async function loadNews(){let n=[];try{n=JSON.parse(await getRemote("news"))}cat
     const im=d.querySelector(".nimg");if(x.image){im.src=/^https?:/.test(x.image)?x.image:"https://raw.githubusercontent.com/"+S.repo+"/HEAD/data/images/"+x.image;im.onerror=()=>im.remove()}else im.remove();
     if(x.tag){const t=document.createElement("span");t.className="tg";t.textContent=x.tag;d.querySelector(".top").prepend(t)}
     d.querySelector("b").textContent=x.title||"";d.querySelector(".d").textContent=x.date||"";d.querySelector("p").textContent=x.text||"";el.appendChild(d)});ncount()}
-function renderLoader(){const f=S.loader==="fabric";
-  [["ld-fabric",f],["ld-forge",!f]].forEach(([i,on])=>{const e=$(i);if(e)e.className=on?"primary":""});
-  [["pl-fabric",f],["pl-forge",!f]].forEach(([i,on])=>{const e=$(i);if(e)e.className="lo"+(on?" on":"")})}
+function renderLoader(){}
 function nscroll(d){const el=$("news");el.scrollBy({left:d*el.clientWidth,behavior:"smooth"})}
 function ncount(){const el=$("news"),n=el.querySelectorAll(".ni").length,c=$("ncount");if(!c)return;c.textContent=n?(Math.min(n,Math.round(el.scrollLeft/Math.max(1,el.clientWidth))+1)+" / "+n):""}
 (function(){const el=$("news");let lock=0;el.addEventListener("scroll",ncount);
@@ -252,7 +246,7 @@ function renderSet(){renderLoader();$("ram").value=S.ram;ramLabel();$("fs").clas
   $("w").value=S.width||0;$("h").value=S.height||0;$("jp").value=S.javaPath||"";$("jvm").value=S.jvm||"";$("dd").textContent=S.dataDir}
 function ramLabel(){$("ramv").textContent=(($("ram").value/1024).toFixed(1))+" GB of memory for Minecraft"}
 $("ram").oninput=()=>{ramLabel();setRam(parseInt($("ram").value));S.ram=parseInt($("ram").value)};
-const pickLoader=l=>async()=>{if(S.loader===l)return;await setLoader(l);await reload();renderAll()};$("ld-forge").onclick=$("pl-forge").onclick=pickLoader("forge");$("ld-fabric").onclick=$("pl-fabric").onclick=pickLoader("fabric");$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
+$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
 async function saveSet(){saveSettings(JSON.stringify({javaPath:$("jp").value,jvm:$("jvm").value,closeOnPlay:$("co").classList.contains("on"),fullscreen:$("fs").classList.contains("on"),width:parseInt($("w").value)||0,height:parseInt($("h").value)||0}));
   await reload();$("setMsg").textContent="Saved.";setTimeout(()=>$("setMsg").textContent="",1800)}
 async function loadLog(){$("log").textContent=await getLog();$("log").scrollTop=1e9}

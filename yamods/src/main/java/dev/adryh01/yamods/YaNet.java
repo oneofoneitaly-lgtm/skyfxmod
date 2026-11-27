@@ -69,9 +69,9 @@ final class YaNet {
     private static void refresh(final String key) {
         Boolean flag = FLAGS.get(key);
         Long at = FETCHED.get(key);
-        long ttl = flag != null && flag ? 5000L : 30000L;
-        if ((at == null || System.currentTimeMillis() - at > ttl) && PENDING.size() < 8 && PENDING.add(key)) {
-            Thread t = new Thread(new Runnable() {
+        long ttl = flag != null && flag ? 60000L : 300000L; // few lookups: no stutter in crowded lobbies
+        if ((at == null || System.currentTimeMillis() - at > ttl) && PENDING.size() < 16 && PENDING.add(key)) {
+            LOOKUP.execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -86,11 +86,19 @@ final class YaNet {
                         PENDING.remove(key);
                     }
                 }
-            }, "YA-Net-Lookup");
-            t.setDaemon(true);
-            t.start();
+            });
         }
     }
+
+    /** One background thread does every lookup, instead of a new thread (and TLS handshake) per player. */
+    private static final java.util.concurrent.ExecutorService LOOKUP = java.util.concurrent.Executors.newSingleThreadExecutor(new java.util.concurrent.ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "YA-Net-Lookup");
+            t.setDaemon(true);
+            return t;
+        }
+    });
 
     /** Call every client tick: keeps our own "I run the client" flag alive while we are in a world. */
     static void tick() {

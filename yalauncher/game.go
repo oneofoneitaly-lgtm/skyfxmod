@@ -457,6 +457,7 @@ func launch(p progressFn, st *state) error {
 		return err
 	}
 	game, _, _, _ := gameDirs()
+	perfTune(game)
 	token, utype := "0", "legacy"
 	if acc.Type == "microsoft" {
 		token, utype = acc.Token, "msa"
@@ -477,8 +478,10 @@ func launch(p progressFn, st *state) error {
 		ram = 2048
 	}
 	jvm := []string{
-		fmt.Sprintf("-Xmx%dM", ram), "-Xms512M",
+		fmt.Sprintf("-Xmx%dM", ram), fmt.Sprintf("-Xms%dM", minInt(ram, 2048)),
 		"-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50",
+		"-XX:+ParallelRefProcEnabled", "-XX:+DisableExplicitGC", "-XX:G1HeapRegionSize=16M", "-XX:-UseAdaptiveSizePolicy",
+		"-Dsun.java2d.noddraw=true", "-Dfml.ignoreInvalidMinecraftCertificates=true",
 		"-Djava.library.path=" + in.natives, "-Dminecraft.launcher.brand=YA-CLIENT",
 		"-cp", strings.Join(in.classpath, ";"), in.mainClass,
 	}
@@ -562,4 +565,60 @@ func fabricLoaderVersion() string {
 		}
 	}
 	return "0.18.3"
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// mergeOptions rewrites key:value lines of an options file, adding the keys that are missing.
+func mergeOptions(path string, kv map[string]string) {
+	var lines []string
+	if b, err := os.ReadFile(path); err == nil {
+		lines = strings.Split(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n")
+	}
+	done := map[string]bool{}
+	for i, l := range lines {
+		k := l
+		if j := strings.Index(l, ":"); j > 0 {
+			k = l[:j]
+		}
+		if v, ok := kv[k]; ok {
+			lines[i] = k + ":" + v
+			done[k] = true
+		}
+	}
+	for k, v := range kv {
+		if !done[k] {
+			lines = append(lines, k+":"+v)
+		}
+	}
+	out := strings.TrimRight(strings.Join(lines, "\n"), "\n") + "\n"
+	os.WriteFile(path, []byte(out), 0o644)
+}
+
+// perfTune applies fast video settings (vanilla + OptiFine) once, on the first launch of this version.
+func perfTune(game string) {
+	marker := filepath.Join(game, ".ya_perf_v1")
+	if _, err := os.Stat(marker); err == nil {
+		return
+	}
+	os.MkdirAll(game, 0o755)
+	mergeOptions(filepath.Join(game, "options.txt"), map[string]string{
+		"renderDistance": "8", "useVbo": "true", "enableVsync": "false", "maxFps": "260",
+		"fancyGraphics": "false", "particles": "2", "ao": "0", "clouds": "false",
+		"entityShadows": "false", "mipmapLevels": "0",
+	})
+	mergeOptions(filepath.Join(game, "optionsof.txt"), map[string]string{
+		"ofFastRender": "true", "ofFastMath": "true", "ofChunkUpdates": "1", "ofSmoothFps": "false",
+		"ofSmoothWorld": "false", "ofRenderRegions": "true", "ofAnimatedWater": "3", "ofAnimatedLava": "3",
+		"ofAnimatedTerrain": "false", "ofAnimatedTextures": "false", "ofAnimatedFire": "false",
+		"ofAnimatedPortal": "false", "ofAnimatedRedstone": "false", "ofAnimatedExplosion": "false",
+		"ofAnimatedFlame": "false", "ofAnimatedSmoke": "false", "ofDynamicLights": "3", "ofLagometer": "false",
+		"ofClouds": "3", "ofRain": "1", "ofAoLevel": "0.0", "ofLoadFar": "false", "ofPreloadedChunks": "0",
+	})
+	os.WriteFile(marker, []byte("1"), 0o644)
 }
