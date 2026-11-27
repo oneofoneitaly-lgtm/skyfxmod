@@ -43,63 +43,6 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.dir }}/build/libs/${{ matrix.name }}-*.jar
 
-  fabric:
-    # Legacy Fabric 1.8.9 port (stage 1). Separate on purpose: if it fails it does not stop the release.
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    defaults:
-      run:
-        working-directory: yafabric
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Download Gradle 9.4.0
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-9.4.0-bin.zip
-          unzip -q gradle-9.4.0-bin.zip
-
-      - name: Build Fabric mod
-        run: gradle-9.4.0/bin/gradle build --no-daemon
-
-      - name: Export Minecraft (Yarn) names for the port
-        if: always()
-        continue-on-error: true
-        run: |
-          mkdir -p /tmp/dump && cd /tmp/dump
-          J=""
-          for f in $(find ~/.gradle "$GITHUB_WORKSPACE/yafabric/.gradle" -name '*.jar' -size +5M 2>/dev/null); do
-            if unzip -l "$f" 2>/dev/null | grep -q "net/minecraft/client/MinecraftClient.class"; then J="$f"; break; fi
-          done
-          echo "mapped jar: $J"
-          mkdir -p x && cd x && unzip -qo "$J" 'net/minecraft/*' || true
-          cd /tmp/dump
-          find x -name '*.class' | sed 's|^x/||; s|\.class$||' | grep -v '\$[0-9]' | sort > classes.txt
-          wc -l classes.txt
-          javap -p -cp x $(cat classes.txt | tr '/' '.' | tr '\n' ' ') > yarn-dump.txt 2> javap-errors.txt || true
-          ls -la yarn-dump.txt
-
-      - name: Upload Yarn names
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: YarnNames
-          path: |
-            /tmp/dump/yarn-dump.txt
-            /tmp/dump/classes.txt
-
-      - name: Upload Fabric jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: YAFabric
-          path: yafabric/build/libs/YAFabric-*.jar
-
   launcher:
     runs-on: windows-latest
     steps:
@@ -126,7 +69,7 @@ jobs:
           path: yalauncher/YA Client.exe
 
   release:
-    needs: [build, launcher, fabric]
+    needs: [build, launcher]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -144,9 +87,6 @@ jobs:
             cp "$f" out/$n.jar
           done
           # the Fabric build is optional while it is being ported: only published when it compiled
-          if ls artifacts/YAFabric/*.jar >/dev/null 2>&1; then
-            cp "$(ls artifacts/YAFabric/*.jar | grep -v -e sources -e dev | head -1)" out/YAFabric.jar
-          fi
           cp "artifacts/YA-CLIENT-Launcher/YA Client.exe" out/YA-CLIENT.exe
           printf '%s' '${{ github.sha }}' > out/version.txt
           ls -la out
