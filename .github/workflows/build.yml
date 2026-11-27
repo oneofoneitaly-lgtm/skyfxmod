@@ -67,6 +67,15 @@ jobs:
       - name: Build Fabric mod
         run: gradle-9.4.0/bin/gradle build --no-daemon
 
+      - name: Show Minecraft class names (only if the build failed)
+        if: failure()
+        run: |
+          J=$(find ~/.gradle -name '*.jar' -path '*minecraft*' -path '*named*' 2>/dev/null | head -1)
+          echo "mapped jar: $J"
+          mkdir -p /tmp/mc && cd /tmp/mc && unzip -qo "$J" || true
+          echo "== Screens ==" && find . -name '*Screen*.class' | sed 's|^\./||' | head -80
+          echo "== MinecraftClient screen methods ==" && javap -p -cp . net.minecraft.client.MinecraftClient | grep -i -E "screen|stop" || true
+
       - name: Upload Fabric jar
         uses: actions/upload-artifact@v4
         with:
