@@ -43,6 +43,36 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.dir }}/build/libs/${{ matrix.name }}-*.jar
 
+  fabric:
+    # Legacy Fabric 1.8.9 port (stage 1). Separate on purpose: if it fails it does not stop the release.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: yafabric
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Download Gradle 9.4.0
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-9.4.0-bin.zip
+          unzip -q gradle-9.4.0-bin.zip
+
+      - name: Build Fabric mod
+        run: gradle-9.4.0/bin/gradle build --no-daemon
+
+      - name: Upload Fabric jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: YAFabric
+          path: yafabric/build/libs/YAFabric-*.jar
+
   launcher:
     runs-on: windows-latest
     steps:
@@ -69,7 +99,7 @@ jobs:
           path: yalauncher/YA Client.exe
 
   release:
-    needs: [build, launcher]
+    needs: [build, launcher, fabric]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -86,6 +116,10 @@ jobs:
             f=$(ls artifacts/$n/*.jar | grep -v -e sources -e deobf | head -1)
             cp "$f" out/$n.jar
           done
+          # the Fabric build is optional while it is being ported: only published when it compiled
+          if ls artifacts/YAFabric/*.jar >/dev/null 2>&1; then
+            cp "$(ls artifacts/YAFabric/*.jar | grep -v -e sources -e dev | head -1)" out/YAFabric.jar
+          fi
           cp "artifacts/YA-CLIENT-Launcher/YA Client.exe" out/YA-CLIENT.exe
           printf '%s' '${{ github.sha }}' > out/version.txt
           ls -la out
