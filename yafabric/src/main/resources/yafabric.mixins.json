@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.adryh01.yafabric.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [],
+  "client": [
+    "MinecraftClientMixin",
+    "InGameHudMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

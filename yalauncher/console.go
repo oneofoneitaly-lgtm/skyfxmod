@@ -70,7 +70,9 @@ func (l *lineWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func gameRunning() bool { return gameProc != nil && gameProc.ProcessState == nil && gameProc.Process != nil }
+func gameRunning() bool {
+	return gameProc != nil && gameProc.ProcessState == nil && gameProc.Process != nil
+}
 
 func killGame() {
 	if gameRunning() {

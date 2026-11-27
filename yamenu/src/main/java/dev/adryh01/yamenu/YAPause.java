@@ -56,8 +56,8 @@ final class YAPause extends YAScreen {
                 mc.theWorld.sendQuittingDisconnectingPacket();
                 mc.loadWorld(null);
                 // leaving a server returns to the multiplayer list, leaving a world to the title screen
-                if (local) mc.displayGuiScreen(new YAMainMenu());
-                else mc.displayGuiScreen(new YAMultiplayer(new YAMainMenu()));
+                if (local) mc.displayGuiScreen(YAMenu.home());
+                else mc.displayGuiScreen(new YAMultiplayer(YAMenu.home()));
                 break;
             default:
         }

@@ -117,7 +117,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
   </div>
   <!-- MODS -->
   <div class="page" id="p-mods">
-    <h1>Mods</h1><h2>YA MODS</h2><div id="mods" style="display:flex;flex-direction:column;gap:10px"></div>
+    <h1>Mods</h1><h2>PERFORMANCE</h2><div id="opti" class="card" style="margin-bottom:16px"></div><h2>YA MODS</h2><div id="mods" style="display:flex;flex-direction:column;gap:10px"></div>
     <h2 style="margin-top:6px">YOUR OWN MODS</h2><div class="card"><div class="sub" id="ext">None.</div></div>
     <div class="row"><button onclick="openMods()">Open mods folder</button><button onclick="openFolder()">Open game folder</button></div>
   </div>
@@ -132,6 +132,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
     <h1>Settings</h1>
     <div class="card">
       <div class="set"><div class="t"><b>Memory (RAM)</b><span id="ramv"></span></div><input id="ram" type="range" min="1024" max="8192" step="512"></div>
+      <div class="set"><div class="t"><b>Game loader</b><span>Forge is the stable one. Fabric is lighter (test build: the YA mods are being ported).</span></div><div class="row" style="gap:6px"><button id="ld-forge">Forge</button><button id="ld-fabric">Fabric</button></div></div>
       <div class="set"><div class="t"><b>Fullscreen</b><span>Start the game in fullscreen.</span></div><div class="sw" id="fs"></div></div>
       <div class="set"><div class="t"><b>Window size</b><span>Used when not fullscreen (0 = default).</span></div><input id="w" type="number" style="width:84px" min="0"><input id="h" type="number" style="width:84px" min="0"></div>
       <div class="set"><div class="t"><b>Close the launcher when the game starts</b></div><div class="sw" id="co"></div></div>
@@ -176,7 +177,18 @@ function renderAcc(){const a=S.account,el=$("acc");
 async function doOffline(){const e=await loginOffline($("nick").value);if(e){$("lmsg").textContent=e;$("lmsg").className="msg err";return}await reload();renderAll()}
 function doMS(){$("lmsg").className="msg";$("lmsg").textContent="Contacting Microsoft...";loginMicrosoft()}
 async function doLogout(){await logout();await reload();renderAll()}
-function renderMods(){$("mods").innerHTML="";let n=0;S.mods.forEach(m=>{if(m.on)n++;const d=document.createElement("div");d.className="mod"+(m.on?" on":"");
+
+let OPT={installed:"",found:""};
+async function optRefresh(){try{OPT=JSON.parse(await optifineState())}catch(e){}renderOpti()}
+function renderOpti(){const el=$("opti");if(!el)return;
+  if(OPT.installed){el.innerHTML='<div class="t"><b>OptiFine is installed</b><span></span></div>';el.querySelector("span").textContent=OPT.installed+" - more FPS, shaders and zoom.";return}
+  el.innerHTML='<div class="t"><b>OptiFine (more FPS)</b><span style="white-space:normal">Not installed. It makes the game much faster. 1) Open the official page and download "OptiFine 1.8.9 HD U M5". 2) Come back here: it is added by itself.</span></div><div class="row" style="margin-top:10px"><button class="primary" id="oo">Open the official page</button>'+(OPT.found?'<button id="oi">Install the downloaded file</button>':'')+'</div><div class="sub" id="om" style="margin-top:8px"></div>';
+  $("oo").onclick=()=>openLink("https://optifine.net/downloads");
+  if($("oi"))$("oi").onclick=optInstall}
+async function optInstall(){const r=await installOptifine();await optRefresh();if(r){const m=$("om");if(m)m.textContent=r}}
+// when you come back from the browser, a downloaded OptiFine is installed automatically
+window.addEventListener("focus",async()=>{if(OPT.installed)return;await optRefresh();if(OPT.found)optInstall()});
+function renderMods(){optRefresh();$("mods").innerHTML="";let n=0;S.mods.forEach(m=>{if(m.on)n++;const d=document.createElement("div");d.className="mod"+(m.on?" on":"");
   d.innerHTML='<div class="t"><b></b><span></span></div><div class="sw"></div>';d.querySelector("b").textContent=m.name;d.querySelector("span").textContent=m.desc;
   d.onclick=()=>{m.on=!m.on;setMod(m.id,m.on);renderMods();renderHero()};$("mods").appendChild(d)});
   $("ext").textContent=S.external.length?S.external.join(", "):"None. Put your own .jar files in the mods folder."}
@@ -196,11 +208,12 @@ async function loadNews(){let n=[];try{n=JSON.parse(await getRemote("news"))}cat
     const im=d.querySelector(".nimg");if(x.image){im.src=/^https?:/.test(x.image)?x.image:"https://raw.githubusercontent.com/"+S.repo+"/HEAD/data/images/"+x.image;im.onerror=()=>im.remove()}else im.remove();
     if(x.tag){const t=document.createElement("span");t.className="tg";t.textContent=x.tag;d.querySelector(".top").prepend(t)}
     d.querySelector("b").textContent=x.title||"";d.querySelector(".d").textContent=x.date||"";d.querySelector("p").textContent=x.text||"";el.appendChild(d)})}
-function renderSet(){$("ram").value=S.ram;ramLabel();$("fs").classList.toggle("on",S.fullscreen);$("co").classList.toggle("on",S.closeOnPlay);
+function renderLoader(){const f=S.loader==="fabric";$("ld-fabric").className=f?"primary":"";$("ld-forge").className=f?"":"primary"}
+function renderSet(){renderLoader();$("ram").value=S.ram;ramLabel();$("fs").classList.toggle("on",S.fullscreen);$("co").classList.toggle("on",S.closeOnPlay);
   $("w").value=S.width||0;$("h").value=S.height||0;$("jp").value=S.javaPath||"";$("jvm").value=S.jvm||"";$("dd").textContent=S.dataDir}
 function ramLabel(){$("ramv").textContent=(($("ram").value/1024).toFixed(1))+" GB of memory for Minecraft"}
 $("ram").oninput=()=>{ramLabel();setRam(parseInt($("ram").value));S.ram=parseInt($("ram").value)};
-$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
+$("ld-forge").onclick=async()=>{await setLoader("forge");await reload();renderAll()};$("ld-fabric").onclick=async()=>{await setLoader("fabric");await reload();renderAll()};$("fs").onclick=()=>$("fs").classList.toggle("on");$("co").onclick=()=>$("co").classList.toggle("on");
 async function saveSet(){saveSettings(JSON.stringify({javaPath:$("jp").value,jvm:$("jvm").value,closeOnPlay:$("co").classList.contains("on"),fullscreen:$("fs").classList.contains("on"),width:parseInt($("w").value)||0,height:parseInt($("h").value)||0}));
   await reload();$("setMsg").textContent="Saved.";setTimeout(()=>$("setMsg").textContent="",1800)}
 async function loadLog(){$("log").textContent=await getLog();$("log").scrollTop=1e9}
@@ -233,7 +246,7 @@ const steps=[
  ()=>`<h1>Your account</h1><p>Log in with Microsoft to play on premium servers, or choose a nickname to play offline.</p><div id="wacc"></div>`,
  ()=>`<h1>Mods</h1><p>Choose what to load with the game.</p><div id="wmods" style="display:flex;flex-direction:column;gap:8px"></div>`,
  ()=>`<h1>Performance</h1><p>How much memory should Minecraft use?</p><div class="opts">${[[2048,"2 GB","Low-end PCs"],[4096,"4 GB","Recommended"],[6144,"6 GB","Many mods"],[8192,"8 GB","High-end PCs"]].map(o=>`<div class="opt${W.ram==o[0]?" on":""}" data-r="${o[0]}">${o[1]}<small>${o[2]}</small></div>`).join("")}</div>
-   <div class="set" style="border:0;padding:4px 0"><div class="t"><b>Fullscreen</b><span>Start the game in fullscreen.</span></div><div class="sw${W.fs?" on":""}" id="wfs"></div></div>`,
+   <div class="sub" style="margin:2px 0 8px">For more FPS, install OptiFine from the Mods page after this setup: the launcher helps you.</div><div class="set" style="border:0;padding:4px 0"><div class="t"><b>Fullscreen</b><span>Start the game in fullscreen.</span></div><div class="sw${W.fs?" on":""}" id="wfs"></div></div>`,
  ()=>`<img class="logo" src="${S.logo}" style="width:72px;height:72px"><h1>You are ready</h1><p>Everything is set. The first start downloads Java, Minecraft and Forge, so it can take a few minutes.</p>`];
 function wizOpen(){wz=0;W.mods=S.mods.map(m=>({id:m.id,on:m.on}));$("wiz").classList.add("on");wizDraw()}
 function wizDraw(){const b=$("wbox");

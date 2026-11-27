@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"archive/zip"
 	"encoding/json"
 	"errors"
@@ -13,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const mcVersion = "1.8.9"
@@ -35,10 +35,10 @@ type artifact struct {
 }
 
 type library struct {
-	Name      string `json:"name"`
-	URL       string `json:"url"`
-	ClientReq *bool  `json:"clientreq"`
-	Rules     []rule `json:"rules"`
+	Name      string            `json:"name"`
+	URL       string            `json:"url"`
+	ClientReq *bool             `json:"clientreq"`
+	Rules     []rule            `json:"rules"`
 	Natives   map[string]string `json:"natives"`
 	Downloads *struct {
 		Artifact    *artifact           `json:"artifact"`
@@ -142,7 +142,7 @@ type installed struct {
 }
 
 // install makes sure Minecraft 1.8.9 and Forge are on disk and returns what is needed to start them.
-func install(p progressFn) (*installed, error) {
+func install(p progressFn, loader string) (*installed, error) {
 	game, libsDir, assetsDir, nativesDir := gameDirs()
 	os.MkdirAll(game, 0o755)
 
@@ -220,18 +220,7 @@ func install(p progressFn) (*installed, error) {
 		}
 	}
 
-	// ---- Forge
-	p("Forge...", 0.1)
-	installer := filepath.Join(dataDir, "cache", "forge-"+forgeVersion+"-installer.jar")
-	if err := download(installer, "", forgeInstaller); err != nil {
-		return nil, errors.New("could not download Forge: " + err.Error())
-	}
-	zr, err := zip.OpenReader(installer)
-	if err != nil {
-		os.Remove(installer)
-		return nil, errors.New("Forge installer is damaged, try again")
-	}
-	defer zr.Close()
+	var forgeJar, fabricMain string
 	var profile struct {
 		Install struct {
 			Path     string `json:"path"`
@@ -243,48 +232,92 @@ func install(p progressFn) (*installed, error) {
 			Libraries []library `json:"libraries"`
 		} `json:"versionInfo"`
 	}
-	for _, f := range zr.File {
-		if f.Name == "install_profile.json" {
-			rc, _ := f.Open()
-			pb, _ := io.ReadAll(rc)
-			rc.Close()
-			json.Unmarshal(pb, &profile)
+	if loader != "fabric" {
+		p("Forge...", 0.1)
+		installer := filepath.Join(dataDir, "cache", "forge-"+forgeVersion+"-installer.jar")
+		if err := download(installer, "", forgeInstaller); err != nil {
+			return nil, errors.New("could not download Forge: " + err.Error())
 		}
-	}
-	if profile.Install.Path == "" {
-		return nil, errors.New("Forge profile not understood")
-	}
-	forgeJar := filepath.Join(libsDir, filepath.FromSlash(mavenPath(profile.Install.Path)))
-	if _, err := os.Stat(forgeJar); err != nil {
+		zr, err := zip.OpenReader(installer)
+		if err != nil {
+			os.Remove(installer)
+			return nil, errors.New("Forge installer is damaged, try again")
+		}
+		defer zr.Close()
 		for _, f := range zr.File {
-			if f.Name == profile.Install.FilePath {
-				os.MkdirAll(filepath.Dir(forgeJar), 0o755)
+			if f.Name == "install_profile.json" {
 				rc, _ := f.Open()
-				out, e := os.Create(forgeJar)
-				if e != nil {
-					return nil, e
-				}
-				io.Copy(out, rc)
-				out.Close()
+				pb, _ := io.ReadAll(rc)
 				rc.Close()
+				json.Unmarshal(pb, &profile)
 			}
 		}
-	}
-	for _, l := range profile.VersionInfo.Libraries {
-		l := l
-		if strings.HasPrefix(l.Name, "net.minecraftforge:forge:") || (l.ClientReq != nil && !*l.ClientReq) {
-			continue
+		if profile.Install.Path == "" {
+			return nil, errors.New("Forge profile not understood")
 		}
-		rel := mavenPath(l.Name)
-		dest := filepath.Join(libsDir, filepath.FromSlash(rel))
-		var urls []string
-		if l.URL != "" {
-			base := strings.Replace(l.URL, "http://", "https://", 1)
-			urls = append(urls, strings.TrimRight(base, "/")+"/"+rel)
+		forgeJar = filepath.Join(libsDir, filepath.FromSlash(mavenPath(profile.Install.Path)))
+		if _, err := os.Stat(forgeJar); err != nil {
+			for _, f := range zr.File {
+				if f.Name == profile.Install.FilePath {
+					os.MkdirAll(filepath.Dir(forgeJar), 0o755)
+					rc, _ := f.Open()
+					out, e := os.Create(forgeJar)
+					if e != nil {
+						return nil, e
+					}
+					io.Copy(out, rc)
+					out.Close()
+					rc.Close()
+				}
+			}
 		}
-		urls = append(urls, "https://libraries.minecraft.net/"+rel, "https://maven.minecraftforge.net/"+rel, "https://repo1.maven.org/maven2/"+rel)
-		add(l.Name, dest)
-		jobs = append(jobs, func() error { return download(dest, "", urls...) })
+		for _, l := range profile.VersionInfo.Libraries {
+			l := l
+			if strings.HasPrefix(l.Name, "net.minecraftforge:forge:") || (l.ClientReq != nil && !*l.ClientReq) {
+				continue
+			}
+			rel := mavenPath(l.Name)
+			dest := filepath.Join(libsDir, filepath.FromSlash(rel))
+			var urls []string
+			if l.URL != "" {
+				base := strings.Replace(l.URL, "http://", "https://", 1)
+				urls = append(urls, strings.TrimRight(base, "/")+"/"+rel)
+			}
+			urls = append(urls, "https://libraries.minecraft.net/"+rel, "https://maven.minecraftforge.net/"+rel, "https://repo1.maven.org/maven2/"+rel)
+			add(l.Name, dest)
+			jobs = append(jobs, func() error { return download(dest, "", urls...) })
+		}
+
+	} else {
+		// ---- Fabric (Legacy Fabric loader for 1.8.9)
+		p("Fabric...", 0.1)
+		lv := fabricLoaderVersion()
+		var fp struct {
+			MainClass string `json:"mainClass"`
+			Libraries []struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"libraries"`
+		}
+		if err := getJSON("https://meta.legacyfabric.net/v2/versions/loader/"+mcVersion+"/"+lv+"/profile/json", &fp); err != nil || fp.MainClass == "" {
+			return nil, errors.New("could not read the Fabric data (check your internet)")
+		}
+		fabricMain = fp.MainClass
+		for _, l := range fp.Libraries {
+			name, base := l.Name, l.URL
+			rel := mavenPath(name)
+			if rel == "" {
+				continue
+			}
+			dest := filepath.Join(libsDir, filepath.FromSlash(rel))
+			var urls []string
+			if base != "" {
+				urls = append(urls, strings.TrimRight(strings.Replace(base, "http://", "https://", 1), "/")+"/"+rel)
+			}
+			urls = append(urls, "https://maven.legacyfabric.net/"+rel, "https://maven.fabricmc.net/"+rel, "https://libraries.minecraft.net/"+rel, "https://repo1.maven.org/maven2/"+rel)
+			add(name, dest)
+			jobs = append(jobs, func() error { return download(dest, "", urls...) })
+		}
 	}
 
 	p("Downloading libraries...", 0.15)
@@ -338,7 +371,6 @@ func install(p progressFn) (*installed, error) {
 	for _, k := range order {
 		cp = append(cp, classpath[k])
 	}
-	cp = append(cp, forgeJar, clientJar)
 	args := profile.VersionInfo.Args
 	if args == "" {
 		args = vj.Args
@@ -346,6 +378,13 @@ func install(p progressFn) (*installed, error) {
 	main := profile.VersionInfo.MainClass
 	if main == "" {
 		main = "net.minecraft.launchwrapper.Launch"
+	}
+	if loader == "fabric" {
+		cp = append(cp, clientJar)
+		args = vj.Args
+		main = fabricMain
+	} else {
+		cp = append(cp, forgeJar, clientJar)
 	}
 	return &installed{classpath: cp, mainClass: main, args: args, assets: assetsDir, natives: nativesDir}, nil
 }
@@ -356,7 +395,7 @@ func syncMods(p progressFn, st *state) error {
 	modsDir := filepath.Join(game, "mods")
 	os.MkdirAll(modsDir, 0o755)
 	for i, m := range modCatalog {
-		on := st.Mods[m.ID]
+		on := st.Mods[m.ID] && m.forLoader(st.Loader)
 		dest := filepath.Join(modsDir, m.File)
 		if !on {
 			os.Remove(dest)
@@ -409,7 +448,7 @@ func launch(p progressFn, st *state) error {
 	} else if java, err = ensureJava(p); err != nil {
 		return err
 	}
-	in, err := install(p)
+	in, err := install(p, st.Loader)
 	if err != nil {
 		return err
 	}
@@ -422,7 +461,7 @@ func launch(p progressFn, st *state) error {
 		token, utype = acc.Token, "msa"
 	}
 	rep := strings.NewReplacer(
-		"${auth_player_name}", acc.Name, "${version_name}", "1.8.9-forge", "${game_directory}", game,
+		"${auth_player_name}", acc.Name, "${version_name}", "1.8.9", "${game_directory}", game,
 		"${assets_root}", in.assets, "${assets_index_name}", "1.8", "${auth_uuid}", acc.UUID,
 		"${auth_access_token}", token, "${user_properties}", "{}", "${user_type}", utype, "${auth_session}", token)
 	gameArgs := strings.Fields(rep.Replace(in.args))
@@ -501,4 +540,25 @@ func launch(p progressFn, st *state) error {
 		}
 	}()
 	return nil
+}
+
+// fabricLoaderVersion picks the newest stable Legacy Fabric loader for 1.8.9 (falls back to a known good one).
+func fabricLoaderVersion() string {
+	var list []struct {
+		Loader struct {
+			Version string `json:"version"`
+			Stable  bool   `json:"stable"`
+		} `json:"loader"`
+	}
+	if err := getJSON("https://meta.legacyfabric.net/v2/versions/loader/"+mcVersion, &list); err == nil {
+		for _, e := range list {
+			if e.Loader.Stable && e.Loader.Version != "" {
+				return e.Loader.Version
+			}
+		}
+		if len(list) > 0 && list[0].Loader.Version != "" {
+			return list[0].Loader.Version
+		}
+	}
+	return "0.18.3"
 }

@@ -26,12 +26,21 @@ var repo = ""
 
 var dataDir string
 
-type modInfo struct{ ID, Name, Desc, File string }
+type modInfo struct{ ID, Name, Desc, File, Loader string }
+
+// forLoader: Forge mods only load with Forge, Fabric mods only with Fabric ("" = Forge, the default).
+func (m modInfo) forLoader(l string) bool {
+	if l == "fabric" {
+		return m.Loader == "fabric"
+	}
+	return m.Loader != "fabric"
+}
 
 var modCatalog = []modInfo{
-	{"yamods", "YA MODS", "112 PvP, HUD and utility modules. Right Shift opens the menu.", "YAMods.jar"},
-	{"yamenu", "YA MENU", "YA CLIENT style for the title screen, singleplayer, multiplayer and pause menu.", "YAMenu.jar"},
-	{"skyfx", "SkyFX", "Custom animated skies.", "SkyFX.jar"},
+	{"yamods", "YA MODS", "112 PvP, HUD and utility modules. Right Shift opens the menu.", "YAMods.jar", ""},
+	{"yamenu", "YA MENU", "YA CLIENT style for the title screen, singleplayer, multiplayer and pause menu.", "YAMenu.jar", ""},
+	{"skyfx", "SkyFX", "Custom animated skies.", "SkyFX.jar", ""},
+	{"yafabric", "YA CLIENT (Fabric)", "The YA CLIENT mods for the Fabric loader (test build: YA home screen so far).", "YAFabric.jar", "fabric"},
 }
 
 type server struct {
@@ -49,6 +58,7 @@ type state struct {
 	JVM         string          `json:"jvm"`
 	CloseOnPlay bool            `json:"closeOnPlay"`
 	Fullscreen  bool            `json:"fullscreen"`
+	Loader      string          `json:"loader"`
 	Configured  bool            `json:"configured"`
 	Width       int             `json:"width"`
 	Height      int             `json:"height"`
@@ -111,6 +121,9 @@ func main() {
 	w.Bind("getState", func() string {
 		mods := []map[string]interface{}{}
 		for _, m := range modCatalog {
+			if !m.forLoader(st.Loader) {
+				continue
+			}
 			mods = append(mods, map[string]interface{}{"id": m.ID, "name": m.Name, "desc": m.Desc, "on": st.Mods[m.ID]})
 		}
 		g, _, _, _ := gameDirs()
@@ -126,7 +139,7 @@ func main() {
 		out := map[string]interface{}{
 			"account": st.Account, "ram": st.RAM, "mods": mods, "join": st.Join,
 			"javaPath": st.JavaPath, "jvm": st.JVM, "closeOnPlay": st.CloseOnPlay, "fullscreen": st.Fullscreen,
-			"width": st.Width, "height": st.Height, "configured": st.Configured, "version": version, "running": gameRunning(), "external": ext, "dataDir": dataDir,
+			"width": st.Width, "height": st.Height, "configured": st.Configured, "loader": st.Loader, "version": version, "running": gameRunning(), "external": ext, "dataDir": dataDir,
 			"logo": "data:image/png;base64," + base64.StdEncoding.EncodeToString(logoPNG), "repo": repo,
 		}
 		b, _ := json.Marshal(out)
@@ -158,6 +171,16 @@ func main() {
 	})
 	w.Bind("logout", func() { st.Account = nil; st.save() })
 	w.Bind("setMod", func(id string, on bool) { st.Mods[id] = on; st.save() })
+	w.Bind("setLoader", func(l string) {
+		if l != "fabric" {
+			l = "forge"
+		}
+		st.Loader = l
+		if l == "fabric" {
+			st.Mods["yafabric"] = true
+		}
+		st.save()
+	})
 	w.Bind("setRam", func(mb int) { st.RAM = mb; st.save() })
 	w.Bind("saveSettings", func(js string) {
 		var v struct {
@@ -202,6 +225,8 @@ func main() {
 		}
 		return strings.Join(lines, "\n")
 	})
+	w.Bind("optifineState", func() string { return optifineState() })
+	w.Bind("installOptifine", func() string { return installOptifine() })
 	w.Bind("openMods", func() {
 		g, _, _, _ := gameDirs()
 		os.MkdirAll(filepath.Join(g, "mods"), 0o755)

@@ -24,6 +24,35 @@ public class YAMenu {
 
     public static final String MODID = "yamenu";
 
+    // home screen style: "new" (test layout) or "classic" (the saved original). Stored in config/yamenu-home.txt
+    private static Boolean homeNew;
+
+    static boolean homeNew() {
+        if (homeNew == null) {
+            try {
+                java.io.File f = new java.io.File(Minecraft.getMinecraft().mcDataDir, "config/yamenu-home.txt");
+                homeNew = f.exists() && new String(java.nio.file.Files.readAllBytes(f.toPath()), "UTF-8").trim().equals("new");
+            } catch (Exception ex) {
+                homeNew = Boolean.FALSE;
+            }
+        }
+        return homeNew;
+    }
+
+    static void setHomeNew(boolean v) {
+        homeNew = v;
+        try {
+            java.io.File f = new java.io.File(Minecraft.getMinecraft().mcDataDir, "config/yamenu-home.txt");
+            f.getParentFile().mkdirs();
+            java.nio.file.Files.write(f.toPath(), (v ? "new" : "classic").getBytes("UTF-8"));
+        } catch (Exception ignored) {
+        }
+    }
+
+    static GuiScreen home() {
+        return homeNew() ? new YAHome() : new YAMainMenuClassic();
+    }
+
     /**
      * Forge's start-up splash is drawn before any mod loads, so it can only be restyled through
      * config/splash.properties. We switch it off (no Forge loading bars) so only the vanilla splash is left,
@@ -66,14 +95,14 @@ public class YAMenu {
     private static GuiScreen parent() {
         GuiScreen cur = Minecraft.getMinecraft().currentScreen;
         // never go "back" to the pause menu: it only exists while a world is loaded
-        return cur instanceof YAScreen && !(cur instanceof YAPause) ? cur : new YAMainMenu();
+        return (cur instanceof YAScreen || cur instanceof YAHome) && !(cur instanceof YAPause) ? cur : home();
     }
 
     @SubscribeEvent
     public void onGui(GuiOpenEvent e) {
         if (e.gui == null) return;
         Class<?> c = e.gui.getClass();
-        if (c == GuiMainMenu.class) e.gui = new YAMainMenu();
+        if (c == GuiMainMenu.class) e.gui = home();
         else if (c == GuiIngameMenu.class) e.gui = new YAPause();
         else if (c == GuiOptions.class) e.gui = new YAOptions(Minecraft.getMinecraft().currentScreen);
         else if (c == GuiSelectWorld.class) e.gui = new YASingleplayer(parent());

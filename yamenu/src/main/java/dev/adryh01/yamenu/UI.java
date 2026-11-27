@@ -50,6 +50,15 @@ final class UI {
         Gui.drawScaledCustomSizeModalRect(x, y, 0.0F, 0.0F, 256, 256, size, size, 256.0F, 256.0F);
     }
 
+    static void logoA(int x, int y, int size, float alpha) {
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, alpha);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(LOGO);
+        Gui.drawScaledCustomSizeModalRect(x, y, 0.0F, 0.0F, 256, 256, size, size, 256.0F, 256.0F);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
     static void scaledText(String s, int cx, int y, float scale, int color) {
         Minecraft mc = Minecraft.getMinecraft();
         GlStateManager.pushMatrix();
