@@ -34,10 +34,18 @@ public final class YAHud {
         shiftWas = sh;
         if (mc.options.hudHidden) return;
         try {
-            Window w = new Window(mc);
-            Hud.renderAll((int) w.getScaledWidth(), (int) w.getScaledHeight(), false);
+            if (win == null || winW != mc.width || winH != mc.height || winScale != mc.options.guiScale) {
+                win = new Window(mc);
+                winW = mc.width;
+                winH = mc.height;
+                winScale = mc.options.guiScale;
+            }
+            Hud.renderAll((int) win.getScaledWidth(), (int) win.getScaledHeight(), false);
         } catch (RuntimeException e) {
             System.out.println("[YA CLIENT] hud error: " + e);
         }
     }
+
+    private static Window win;
+    private static int winW, winH, winScale;
 }

@@ -60,13 +60,22 @@ public class Events {
         }
     }
 
+    private ScaledResolution srCache;
+    private int srW, srH, srScale;
+
     @SubscribeEvent
     public void onOverlay(RenderGameOverlayEvent.Post e) {
         if (e.type != RenderGameOverlayEvent.ElementType.ALL) return;
         if (mc.thePlayer == null || mc.gameSettings.hideGUI) return;
         if (mc.currentScreen instanceof HudEditor) return; // the editor draws the HUD itself
-        ScaledResolution sr = new ScaledResolution(mc);
-        Hud.renderAll(sr.getScaledWidth(), sr.getScaledHeight(), false, mc.gameSettings.showDebugInfo);
+        // the scaled size only changes when the window or the GUI scale changes: do not rebuild it every frame
+        if (srCache == null || srW != mc.displayWidth || srH != mc.displayHeight || srScale != mc.gameSettings.guiScale) {
+            srCache = new ScaledResolution(mc);
+            srW = mc.displayWidth;
+            srH = mc.displayHeight;
+            srScale = mc.gameSettings.guiScale;
+        }
+        Hud.renderAll(srCache.getScaledWidth(), srCache.getScaledHeight(), false, mc.gameSettings.showDebugInfo);
     }
 
     @SubscribeEvent
