@@ -39,7 +39,7 @@ public final class Extra {
 
     /** FOV multiplier used by the GameRenderer mixin (1 = unchanged). */
     public static float fovMultiplier() {
-        return ZOOM.enabled && ZOOM.anim > 0.0F ? ZOOM.fovMultiplier() : 1.0F;
+        return ZOOM.enabled && (ZOOM.zooming || ZOOM.anim > 0.0F) ? ZOOM.fovMultiplier() : 1.0F;
     }
 
     public static boolean crosshairHidden() {
@@ -58,7 +58,7 @@ public final class Extra {
 
     static final class Zoom extends Module {
         final Setting amount = Setting.slider("amount", "Zoom amount", 4.0F, 1.5F, 10.0F, 0.5F);
-        final Setting smooth = Setting.bool("smooth", "Smooth camera", true);
+        final Setting smooth = Setting.bool("smooth", "Smooth camera", false);
         float anim;
         boolean zooming, changedSmooth, prevSmooth;
 
@@ -68,16 +68,25 @@ public final class Extra {
             settings.add(smooth);
         }
 
+        long last = System.nanoTime();
+        float eased;
+
+        /** Called every frame (from the FOV mixin): time-based animation, independent of FPS. */
         float fovMultiplier() {
-            return 1.0F - anim * (1.0F - 1.0F / amount.v);
+            long now = System.nanoTime();
+            float dt = Math.min(0.1F, (now - last) / 1.0E9F);
+            last = now;
+            float target = zooming ? 1.0F : 0.0F;
+            anim += (target - anim) * (1.0F - (float) Math.exp(-dt * 16.0F));
+            if (Math.abs(target - anim) < 0.002F) anim = target;
+            eased = anim * anim * (3.0F - 2.0F * anim);
+            return 1.0F - eased * (1.0F - 1.0F / amount.v);
         }
 
         @Override
         public void onTick() {
             boolean down = Keyboard.isKeyDown(Keyboard.KEY_C) && mc.currentScreen == null;
             zooming = down;
-            anim += ((down ? 1.0F : 0.0F) - anim) * 0.35F;
-            if (anim < 0.005F) anim = 0.0F;
             if (smooth.b) {
                 if (down && !changedSmooth) {
                     prevSmooth = mc.options.smoothCameraEnabled;

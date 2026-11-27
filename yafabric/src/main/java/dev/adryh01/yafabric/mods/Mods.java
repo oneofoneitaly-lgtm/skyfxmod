@@ -29,6 +29,7 @@ public final class Mods {
         ALL.clear();
         HudMods.register(ALL);
         Extra.register(ALL);
+        ALL.add(new Boost());
         Catalog.register(ALL);
         // sensible defaults for a first start
         for (Module m : ALL) {

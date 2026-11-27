@@ -4,41 +4,39 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.util.Identifier;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/** The YA MODS menu on Fabric: categories, module list with switches and a settings page. */
+/** The YAMods menu (Right Shift): module cards with a switch and a settings page per module. */
 public class ModMenu extends Screen {
 
-    private static final String[] CATS = {"Info", "PvP", "Utility", "Visual"};
-    private static int cat;
-    private static Module selected;
-    private int scrollL, scrollR;
+    private final MinecraftClient mc = MinecraftClient.getInstance();
+
+    private static final String[] CATS = {"All", "Info", "PvP", "Utility", "Visual"};
+    private static final int GAP = 8, CARD_H = 50, ROW_H = 22;
+
+    private String category = "All";
+    private String query = "";
+    private boolean searching;
+    private final List<Module> shown = new ArrayList<Module>();
+    private Module open;          // module whose settings page is shown
     private Setting dragging;
-    private int dragX, dragW;
+    private Setting editing;      // text setting being typed into     // slider being dragged
+    private float scroll, scrollTarget, gridScroll;
+    private long openTime;
 
-    private static final int PW = 400, PH = 250;
+    private int px, py, pw, ph, gx, gy, gw, gh, cols, cardW;
 
-    private int px() {
-        return (width - PW) / 2;
-    }
-
-    private int py() {
-        return (height - PH) / 2;
-    }
-
-    private List<Module> list() {
-        List<Module> l = new ArrayList<Module>();
-        for (Module m : Mods.ALL) {
-            if (m.category.equals(CATS[cat])) l.add(m);
-        }
-        return l;
-    }
-
-    private static boolean in(int mx, int my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
+    @Override
+    public void init() {
+        openTime = System.currentTimeMillis();
+        rebuild();
     }
 
     @Override
@@ -47,174 +45,429 @@ public class ModMenu extends Screen {
     }
 
     @Override
-    public void render(int mx, int my, float delta) {
-        TextRenderer fr = MinecraftClient.getInstance().textRenderer;
-        DrawableHelper.fill(0, 0, width, height, 0x70000000);
-        int x = px(), y = py();
-        UI.roundBox(x, y, x + PW, y + PH, 6, UI.BORDER, UI.BG, 1);
-        fr.draw("YA MODS", x + 12, y + 10, UI.DARK);
-        int tx = x + 90;
-        for (int i = 0; i < CATS.length; i++) {
-            int w = fr.getStringWidth(CATS[i]) + 14;
-            boolean on = i == cat;
-            UI.roundRect(tx, y + 6, tx + w, y + 22, 4, on ? UI.DARK : (in(mx, my, tx, y + 6, w, 16) ? UI.CHIP : UI.HEADER));
-            fr.draw(CATS[i], tx + 7, y + 10, on ? 0xFFFFFFFF : UI.MID);
-            tx += w + 4;
+    public void removed() {
+        Mods.save();
+    }
+
+    private void rebuild() {
+        shown.clear();
+        for (Module m : Mods.ALL) {
+            if (!(category.equals("All") || m.category.equals(category))) continue;
+            if (query.length() > 0) {
+                String q = query.toLowerCase();
+                if (!m.name.toLowerCase().contains(q) && !m.desc.toLowerCase().contains(q)) continue;
+            }
+            shown.add(m);
         }
-        // module list (left)
-        int lx = x + 10, ly = y + 30, lw = 170, lh = PH - 40;
-        UI.roundBox(lx, ly, lx + lw, ly + lh, 4, UI.BORDER, UI.CARD, 1);
-        List<Module> mods = list();
-        int total = mods.size() * 20;
-        scrollL = Math.max(0, Math.min(scrollL, Math.max(0, total - (lh - 4))));
-        int sy = ly + 2 - scrollL;
-        for (Module m : mods) {
-            if (sy + 20 > ly && sy < ly + lh - 2) {
-                boolean sel = m == selected, hv = in(mx, my, lx + 2, sy, lw - 4, 18) && my > ly && my < ly + lh;
-                if (sel || hv) UI.roundRect(lx + 2, sy, lx + lw - 2, sy + 18, 3, sel ? UI.HEADER : UI.CARD_HOVER);
-                String nm = fr.trimToWidth(m.name, lw - 48);
-                fr.draw(nm, lx + 8, sy + 5, UI.DARK);
-                m.knob += ((m.enabled ? 1.0F : 0.0F) - m.knob) * 0.4F;
-                UI.sw(lx + lw - 30, sy + 3, m.knob);
-            }
-            sy += 20;
+        scroll = 0.0F;
+        scrollTarget = 0.0F;
+    }
+
+    private void layout() {
+        pw = Math.min(460, width - 20);
+        ph = Math.min(292, height - 20);
+        float o = Math.min(1.0F, (System.currentTimeMillis() - openTime) / 230.0F);
+        o = 1.0F - (1.0F - o) * (1.0F - o) * (1.0F - o);
+        px = (width - pw) / 2;
+        py = (height - ph) / 2 + (int) ((1.0F - o) * 14.0F);
+        gx = px + 14;
+        gy = py + 64;
+        gw = pw - 28 - 8;
+        gh = ph - 64 - 40;
+        cols = gw >= 300 ? 2 : 1;
+        cardW = (gw - GAP * (cols - 1)) / cols;
+    }
+
+    private int maxScroll() {
+        int rows = (shown.size() + cols - 1) / cols;
+        return Math.max(0, rows * (CARD_H + GAP) - GAP - gh);
+    }
+
+    private int cardX(int i) {
+        return gx + (i % cols) * (cardW + GAP);
+    }
+
+    private int cardY(int i) {
+        return gy + (i / cols) * (CARD_H + GAP) - (int) scroll;
+    }
+
+    // ------------------------------------------------------------------ draw
+
+    @Override
+    public void render(int mx, int my, float pt) {
+        layout();
+        TextRenderer fr = mc.textRenderer;
+        float o = Math.min(1.0F, (System.currentTimeMillis() - openTime) / 230.0F);
+
+        DrawableHelper.fill(0, 0, width, height, ((int) (60 * o)) << 24);
+
+        UI.roundRect(px + 2, py + 3, px + pw + 2, py + ph + 3, 8, 0x26000000);
+        UI.roundRect(px, py, px + pw, py + ph, 8, UI.BG);
+        UI.roundRect(px, py, px + pw, py + 36, 8, UI.HEADER);
+        DrawableHelper.fill(px, py + 20, px + pw, py + 36, UI.HEADER);
+        DrawableHelper.fill(px, py + 36, px + pw, py + 37, UI.LINE);
+
+        GL11.glPushMatrix();
+        GL11.glTranslatef(px + 14, py + 10, 0);
+        GL11.glScalef(1.5F, 1.5F, 1.0F);
+        fr.draw("YA MODS", 0, 0, UI.DARK);
+        GL11.glPopMatrix();
+        fr.draw("by " + "@Adryh01", px + 14 + (int) (fr.getStringWidth("YA MODS") * 1.5F) + 8, py + 15, UI.SOFT);
+
+        int cbx = px + pw - 28, cby = py + 9;
+        boolean overClose = mx >= cbx && mx < cbx + 18 && my >= cby && my < cby + 18;
+        UI.roundRect(cbx, cby, cbx + 18, cby + 18, 4, overClose ? 0xFFD4D4D4 : UI.CHIP);
+        fr.draw("x", cbx + 9 - fr.getStringWidth("x") / 2, cby + 5, UI.MID);
+
+        if (open == null) drawGrid(mx, my, fr);
+        else drawSettings(mx, my, fr);
+
+        // footer
+        int fy = py + ph - 26;
+        DrawableHelper.fill(px, py + ph - 34, px + pw, py + ph - 33, UI.LINE);
+        boolean overEdit = mx >= px + 14 && mx < px + 78 && my >= fy - 1 && my < fy + 15;
+        UI.roundRect(px + 14, fy - 1, px + 78, fy + 15, 6, overEdit ? 0xFF4A4A4A : UI.ACCENT);
+        fr.draw("Edit HUD", px + 46 - fr.getStringWidth("Edit HUD") / 2, fy + 3, 0xFFFFFFFF);
+        String hint = "Right Shift to close";
+        fr.draw(hint, px + pw - 14 - fr.getStringWidth(hint), fy + 3, UI.SOFT);
+    }
+
+    private void drawGrid(int mx, int my, TextRenderer fr) {
+        int cx = px + 14;
+        for (String c : CATS) {
+            int cw = fr.getStringWidth(c) + 16;
+            boolean sel = c.equals(category);
+            boolean over = mx >= cx && mx < cx + cw && my >= py + 43 && my < py + 59;
+            UI.roundRect(cx, py + 43, cx + cw, py + 59, 6, sel ? UI.ACCENT : (over ? 0xFFD8D8D8 : UI.CHIP));
+            fr.draw(c, cx + 8, py + 47, sel ? 0xFFFFFFFF : UI.MID);
+            cx += cw + 6;
         }
-        // settings (right)
-        int rx = x + 190, rw = PW - 200;
-        UI.roundBox(rx, ly, rx + rw, ly + lh, 4, UI.BORDER, UI.CARD, 1);
-        if (selected == null) {
-            fr.draw("Pick a module on the left.", rx + 10, ly + 10, UI.SOFT);
-        } else {
-            fr.draw(selected.name, rx + 10, ly + 8, UI.DARK);
-            for (String line : fr.wrapLines(selected.desc, rw - 20)) {
-                // only the first two lines
-                if (line == null) break;
-            }
-            List<String> d = fr.wrapLines(selected.desc, rw - 20);
-            int dy = ly + 22;
-            for (int i = 0; i < Math.min(2, d.size()); i++, dy += 10) fr.draw(d.get(i), rx + 10, dy, UI.SOFT);
-            int top = dy + 4;
-            int rowsH = 0;
-            for (Setting s : selected.settings) if (!s.hidden) rowsH += 20;
-            int view = ly + lh - top - 2;
-            scrollR = Math.max(0, Math.min(scrollR, Math.max(0, rowsH - view)));
-            int ry = top - scrollR;
-            for (Setting s : selected.settings) {
-                if (s.hidden) continue;
-                if (ry + 18 > top && ry < ly + lh - 2) drawSetting(fr, s, rx + 8, ry, rw - 16, mx, my);
-                ry += 20;
-            }
+
+        int sbw = Math.min(120, Math.max(0, px + pw - 14 - cx - 4)), sbx = px + pw - 14 - sbw;
+        if (sbw >= 70) {
+            UI.roundBox(sbx, py + 43, sbx + sbw, py + 59, 6, searching ? UI.ACCENT : UI.BORDER, 0xFFFFFFFF, 1);
+            String shownQ = query.length() == 0 && !searching ? "Search mods..." : query;
+            if (searching && (System.currentTimeMillis() / 500) % 2 == 0) shownQ += "_";
+            fr.draw(fr.trimToWidth(shownQ, sbw - 12, true), sbx + 6, py + 47, query.length() == 0 && !searching ? UI.SOFT : UI.DARK);
+        }
+        if (shown.isEmpty()) fr.draw("No mods found.", gx + 4, gy + 6, UI.SOFT);
+
+        int max = maxScroll();
+        scrollTarget = Math.max(0, Math.min(max, scrollTarget));
+        scroll += (scrollTarget - scroll) * 0.35F;
+        if (Math.abs(scrollTarget - scroll) < 0.2F) scroll = scrollTarget;
+
+        UI.scissor(mc, gx - 2, gy, gx + gw + 2, gy + gh);
+        boolean inGrid = mx >= gx && mx < gx + gw && my >= gy && my < gy + gh;
+        for (int i = 0; i < shown.size(); i++) {
+            Module m = shown.get(i);
+            int x = cardX(i), y = cardY(i);
+            if (y + CARD_H < gy || y > gy + gh) continue;
+            boolean over = inGrid && mx >= x && mx < x + cardW && my >= y && my < y + CARD_H;
+            m.hover += ((over ? 1.0F : 0.0F) - m.hover) * 0.3F;
+            m.knob += ((m.enabled ? 1.0F : 0.0F) - m.knob) * 0.35F;
+
+            int border = m.enabled ? UI.ACCENT : UI.lerp(UI.BORDER, UI.SOFT, m.hover);
+            UI.roundBox(x, y, x + cardW, y + CARD_H, 5, border, over ? UI.CARD_HOVER : UI.CARD, m.enabled ? 2 : 1);
+
+            fr.draw(fr.trimToWidth(m.name, cardW - 50), x + 9, y + 8, UI.DARK);
+            fr.draw(fr.trimToWidth(m.desc, cardW - 18), x + 9, y + 21, UI.MID);
+            fr.draw(m.category, x + 9, y + CARD_H - 13, UI.SOFT);
+            UI.sw(x + cardW - 32, y + 8, m.knob);
+
+            int bx = x + cardW - 62, by = y + CARD_H - 18;
+            boolean overBtn = over && mx >= bx && mx < bx + 54 && my >= by && my < by + 13;
+            UI.roundRect(bx, by, bx + 54, by + 13, 5, overBtn ? 0xFFD4D4D4 : UI.CHIP);
+            fr.draw("Settings", bx + 27 - fr.getStringWidth("Settings") / 2, by + 3, UI.MID);
+        }
+        UI.scissorOff();
+
+        if (max > 0) {
+            int tx = gx + gw + 4;
+            DrawableHelper.fill(tx, gy, tx + 3, gy + gh, 0xFFE2E2E2);
+            int rows = (shown.size() + cols - 1) / cols;
+            int content = rows * (CARD_H + GAP) - GAP;
+            int th = Math.max(18, gh * gh / content);
+            int ty = gy + (int) ((gh - th) * (scroll / max));
+            UI.roundRect(tx, ty, tx + 3, ty + th, 1, 0xFF9C9C9C);
         }
     }
 
-    private void drawSetting(TextRenderer fr, Setting s, int x, int y, int w, int mx, int my) {
-        boolean hv = in(mx, my, x, y, w, 18);
-        UI.roundRect(x, y, x + w, y + 18, 3, hv ? UI.HEADER : UI.CARD_HOVER);
-        fr.draw(fr.trimToWidth(s.label, w - 70), x + 6, y + 5, UI.DARK);
-        if (s.type == Setting.BOOL) {
-            UI.sw(x + w - 28, y + 3, s.b ? 1.0F : 0.0F);
-        } else if (s.type == Setting.SLIDER) {
-            int bx = x + w - 84, bw = 50;
-            DrawableHelper.fill(bx, y + 8, bx + bw, y + 10, 0xFFCFCFCF);
-            int kx = bx + (int) (bw * s.fraction());
-            DrawableHelper.fill(bx, y + 8, kx, y + 10, UI.DARK);
-            UI.roundRect(kx - 2, y + 5, kx + 2, y + 13, 2, UI.DARK);
-            String v = s.display();
-            fr.draw(v, x + w - 4 - fr.getStringWidth(v), y + 5, UI.MID);
-        } else {
-            String v = s.display();
-            fr.draw(v, x + w - 6 - fr.getStringWidth(v), y + 5, UI.MID);
+    private void drawSettings(int mx, int my, TextRenderer fr) {
+        boolean overBack = mx >= gx && mx < gx + 52 && my >= py + 43 && my < py + 59;
+        UI.roundRect(gx, py + 43, gx + 52, py + 59, 6, overBack ? 0xFFD8D8D8 : UI.CHIP);
+        fr.draw("< Back", gx + 26 - fr.getStringWidth("< Back") / 2, py + 47, UI.MID);
+
+        GL11.glPushMatrix();
+        GL11.glTranslatef(gx + 62, py + 44, 0);
+        GL11.glScalef(1.25F, 1.25F, 1.0F);
+        fr.draw(open.name, 0, 0, UI.DARK);
+        GL11.glPopMatrix();
+        String st = open.enabled ? "Enabled" : "Disabled";
+        fr.draw(st, gx + gw - fr.getStringWidth(st) - 30, py + 47, open.enabled ? UI.DARK : UI.SOFT);
+        open.knob += ((open.enabled ? 1.0F : 0.0F) - open.knob) * 0.35F;
+        UI.sw(gx + gw - 24, py + 45, open.knob);
+
+        scrollTarget = Math.max(0, Math.min(settingsMax(), scrollTarget));
+        scroll += (scrollTarget - scroll) * 0.35F;
+        if (Math.abs(scrollTarget - scroll) < 0.2F) scroll = scrollTarget;
+        UI.scissor(mc, gx - 2, gy, gx + gw + 2, gy + gh);
+        int y = gy + 4 - (int) scroll;
+        for (Setting s : rows()) {
+            boolean over = mx >= gx && mx < gx + gw && my >= Math.max(y, gy) && my < Math.min(y + ROW_H, gy + gh);
+            UI.roundRect(gx, y, gx + gw, y + ROW_H - 2, 4, over ? UI.CARD_HOVER : UI.CARD);
+            fr.draw(s.label, gx + 10, y + 7, UI.DARK);
+            int right = gx + gw - 10;
+            switch (s.type) {
+                case Setting.BOOL:
+                    UI.sw(right - 22, y + 4, s.b ? 1.0F : 0.0F);
+                    break;
+                case Setting.SLIDER: {
+                    int tx = right - 150, tw = 100;
+                    DrawableHelper.fill(tx, y + 9, tx + tw, y + 12, 0xFFD0D0D0);
+                    int fill = (int) (tw * s.fraction());
+                    DrawableHelper.fill(tx, y + 9, tx + fill, y + 12, UI.ACCENT);
+                    UI.roundRect(tx + fill - 3, y + 5, tx + fill + 3, y + 15, 3, 0xFFFFFFFF);
+                    UI.roundBox(tx + fill - 3, y + 5, tx + fill + 3, y + 15, 3, UI.ACCENT, 0xFFFFFFFF, 1);
+                    String v = s.display();
+                    fr.draw(v, right - fr.getStringWidth(v), y + 7, UI.MID);
+                    break;
+                }
+                case Setting.ACTION: {
+                    int bw = 106;
+                    UI.roundRect(right - bw, y + 3, right, y + 17, 5, UI.ACCENT);
+                    fr.draw("Open", right - bw / 2 - fr.getStringWidth("Open") / 2, y + 7, 0xFFFFFFFF);
+                    break;
+                }
+                case Setting.TEXT: {
+                    int bw = 106;
+                    boolean ed = editing == s;
+                    UI.roundBox(right - bw, y + 3, right, y + 17, 5, ed ? UI.ACCENT : UI.BORDER, 0xFFFFFFFF, 1);
+                    String v = s.s.length() == 0 && !ed ? "click to type" : s.s;
+                    if (ed && (System.currentTimeMillis() / 500) % 2 == 0) v += "_";
+                    fr.draw(fr.trimToWidth(v, bw - 8, true), right - bw + 5, y + 7, s.s.length() == 0 && !ed ? UI.SOFT : UI.DARK);
+                    break;
+                }
+                default: {
+                    int bw = 106;
+                    UI.roundRect(right - bw, y + 3, right, y + 17, 5, UI.CHIP);
+                    String v = s.display();
+                    int textX = right - bw / 2 - fr.getStringWidth(v) / 2;
+                    if (s.type == Setting.COLOR) {
+                        DrawableHelper.fill(right - bw + 6, y + 7, right - bw + 12, y + 13, 0xFF000000 | s.rgb());
+                    }
+                    fr.draw(v, textX + (s.type == Setting.COLOR ? 5 : 0), y + 7, UI.DARK);
+                }
+            }
+            y += ROW_H;
         }
+        UI.scissorOff();
     }
+
+    // ----------------------------------------------------------------- input
 
     @Override
     protected void mouseClicked(int mx, int my, int button) {
-        if (button != 0) return;
-        int x = px(), y = py();
-        {
-            TextRenderer fr = MinecraftClient.getInstance().textRenderer;
-            int tx = x + 90;
-            for (int i = 0; i < CATS.length; i++) {
-                int w = fr.getStringWidth(CATS[i]) + 14;
-                if (in(mx, my, tx, y + 6, w, 16)) {
-                    cat = i;
-                    scrollL = 0;
-                    selected = null;
-                    return;
-                }
-                tx += w + 4;
-            }
-        }
-        int lx = x + 10, ly = y + 30, lw = 170, lh = PH - 40;
-        if (in(mx, my, lx, ly, lw, lh)) {
-            int sy = ly + 2 - scrollL;
-            for (Module m : list()) {
-                if (in(mx, my, lx + 2, sy, lw - 4, 18)) {
-                    if (mx >= lx + lw - 34) {
-                        m.setEnabled(!m.enabled);
-                        Mods.save();
-                    } else {
-                        selected = m;
-                        scrollR = 0;
-                    }
-                    return;
-                }
-                sy += 20;
-            }
+        super.mouseClicked(mx, my, button);
+        layout();
+        TextRenderer fr = mc.textRenderer;
+
+        int cbx = px + pw - 28, cby = py + 9;
+        if (button == 0 && mx >= cbx && mx < cbx + 18 && my >= cby && my < cby + 18) {
+            click();
+            mc.setScreen(null);
             return;
         }
-        int rx = x + 190, rw = PW - 200;
-        if (selected != null && in(mx, my, rx, ly, rw, lh)) {
-            TextRenderer fr = MinecraftClient.getInstance().textRenderer;
-            int dy = ly + 22 + 10 * Math.min(2, fr.wrapLines(selected.desc, rw - 20).size());
-            int ry = dy + 4 - scrollR;
-            for (Setting s : selected.settings) {
-                if (s.hidden) continue;
-                if (in(mx, my, rx + 8, ry, rw - 16, 18)) {
-                    if (s.type == Setting.SLIDER) {
-                        dragging = s;
-                        dragX = rx + 8 + rw - 16 - 84;
-                        dragW = 50;
-                        s.setFraction((mx - dragX) / (float) dragW);
-                    } else if (s.type == Setting.ACTION) {
-                        if (s.run != null) s.run.run();
+        int fy = py + ph - 26;
+        if (button == 0 && mx >= px + 14 && mx < px + 78 && my >= fy - 1 && my < fy + 15) {
+            click();
+            mc.setScreen(new HudEditor());
+            return;
+        }
+
+        if (open != null) {
+            clickSettings(mx, my, button);
+            return;
+        }
+        if (button != 0) return;
+
+        int sx0 = px + 14;
+        for (String c : CATS) sx0 += fr.getStringWidth(c) + 22;
+        int sbw = Math.min(120, Math.max(0, px + pw - 14 - sx0 - 4)), sbx = px + pw - 14 - sbw;
+        searching = sbw >= 70 && mx >= sbx && mx < sbx + sbw && my >= py + 43 && my < py + 59;
+        if (searching) return;
+
+        int cx = px + 14;
+        for (String c : CATS) {
+            int cw = fr.getStringWidth(c) + 16;
+            if (mx >= cx && mx < cx + cw && my >= py + 43 && my < py + 59) {
+                if (!c.equals(category)) {
+                    category = c;
+                    rebuild();
+                    click();
+                }
+                return;
+            }
+            cx += cw + 6;
+        }
+
+        if (mx >= gx && mx < gx + gw && my >= gy && my < gy + gh) {
+            for (int i = 0; i < shown.size(); i++) {
+                Module m = shown.get(i);
+                int x = cardX(i), y = cardY(i);
+                if (mx >= x && mx < x + cardW && my >= y && my < y + CARD_H) {
+                    int bx = x + cardW - 62, by = y + CARD_H - 18;
+                    if (mx >= bx && mx < bx + 54 && my >= by && my < by + 13) {
+                        gridScroll = scrollTarget;
+                        open = m;
+                        scroll = 0.0F;
+                        scrollTarget = 0.0F;
                     } else {
-                        s.cycle(1);
+                        m.setEnabled(!m.enabled);
+                        Mods.save();
                     }
+                    click();
                     return;
                 }
-                ry += 20;
             }
         }
+    }
+
+    private void clickSettings(int mx, int my, int button) {
+        editing = null;
+        if (button == 0 && mx >= gx && mx < gx + 52 && my >= py + 43 && my < py + 59) {
+            closeSettings();
+            click();
+            return;
+        }
+        if (button == 0 && mx >= gx + gw - 26 && mx < gx + gw && my >= py + 43 && my < py + 61) {
+            open.setEnabled(!open.enabled);
+            Mods.save();
+            click();
+            return;
+        }
+        if (my < gy || my >= gy + gh) return;
+        int y = gy + 4 - (int) scroll;
+        for (Setting s : rows()) {
+            if (my >= y && my < y + ROW_H && mx >= gx && mx < gx + gw) {
+                int right = gx + gw - 10;
+                if (s.type == Setting.BOOL) {
+                    s.cycle(1);
+                    Mods.save();
+                    click();
+                } else if (s.type == Setting.SLIDER) {
+                    if (button == 0) {
+                        dragging = s;
+                        sliderTo(s, mx);
+                    }
+                } else if (s.type == Setting.ACTION) {
+                    if (mx >= right - 106 && s.run != null) {
+                        click();
+                        s.run.run();
+                    }
+                } else if (s.type == Setting.TEXT) {
+                    if (mx >= right - 106) editing = s;
+                } else if (mx >= right - 106) {
+                    s.cycle(button == 1 ? -1 : 1);
+                    Mods.save();
+                    click();
+                }
+                return;
+            }
+            y += ROW_H;
+        }
+    }
+
+    private void sliderTo(Setting s, int mx) {
+        int tx = gx + gw - 10 - 150;
+        s.setFraction((mx - tx) / 100.0F);
     }
 
     @Override
     protected void mouseDragged(int mx, int my, int button, long time) {
-        if (dragging != null) dragging.setFraction((mx - dragX) / (float) dragW);
+        if (dragging != null) sliderTo(dragging, mx);
     }
 
     @Override
-    protected void mouseReleased(int mx, int my, int button) {
-        if (dragging != null) Mods.save();
-        dragging = null;
+    protected void mouseReleased(int mx, int my, int state) {
+        if (dragging != null) {
+            dragging = null;
+            Mods.save();
+        }
+        super.mouseReleased(mx, my, state);
+    }
+
+    @Override
+    protected void keyPressed(char c, int key) {
+        if (editing != null) {
+            if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_ESCAPE) {
+                editing = null;
+                Mods.save();
+            } else if (key == Keyboard.KEY_BACK) {
+                if (editing.s.length() > 0) editing.s = editing.s.substring(0, editing.s.length() - 1);
+            } else if (net.minecraft.util.SharedConstants.isValidChar(c) && editing.s.length() < editing.maxLen) {
+                editing.s += c;
+            }
+            return;
+        }
+        if (searching && open == null) {
+            if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_ESCAPE) {
+                searching = false;
+                if (key == Keyboard.KEY_ESCAPE && query.length() > 0) {
+                    query = "";
+                    rebuild();
+                }
+            } else if (key == Keyboard.KEY_BACK) {
+                if (query.length() > 0) {
+                    query = query.substring(0, query.length() - 1);
+                    rebuild();
+                }
+            } else if (key != Keyboard.KEY_RSHIFT && net.minecraft.util.SharedConstants.isValidChar(c) && query.length() < 20) {
+                query += c;
+                rebuild();
+            }
+            if (key != Keyboard.KEY_RSHIFT) return;
+        }
+        if (key == Keyboard.KEY_RSHIFT) {
+            mc.setScreen(null);
+            return;
+        }
+        if (key == Keyboard.KEY_ESCAPE && open != null) {
+            closeSettings();
+            return;
+        }
+        super.keyPressed(c, key);
     }
 
     @Override
     public void handleMouse() {
         super.handleMouse();
         int d = Mouse.getEventDWheel();
-        if (d == 0) return;
-        int mx = Mouse.getEventX() * width / MinecraftClient.getInstance().width;
-        int step = d > 0 ? -20 : 20;
-        if (mx < px() + 185) scrollL = Math.max(0, scrollL + step);
-        else scrollR = Math.max(0, scrollR + step);
+        if (d != 0) {
+            scrollTarget -= Integer.signum(d) * (open == null ? CARD_H * 0.7F : ROW_H * 2.0F);
+            scrollTarget = Math.max(0, Math.min(open == null ? maxScroll() : settingsMax(), scrollTarget));
+        }
     }
 
-    @Override
-    protected void keyPressed(char c, int key) {
-        if (key == 1 || key == 54) {
-            Mods.save();
-            MinecraftClient.getInstance().setScreen(null);
+    private void closeSettings() {
+        open = null;
+        scroll = gridScroll;
+        scrollTarget = gridScroll;
+    }
+
+    private List<Setting> rows() {
+        List<Setting> r = new ArrayList<Setting>();
+        for (Setting s : open.settings) {
+            if (!s.hidden) r.add(s);
         }
+        return r;
+    }
+
+    private int settingsMax() {
+        return Math.max(0, rows().size() * ROW_H + 4 - gh);
+    }
+
+    private void click() {
+        mc.getSoundManager().play(PositionedSoundInstance.master(new Identifier("gui.button.press"), 1.0F));
     }
 }

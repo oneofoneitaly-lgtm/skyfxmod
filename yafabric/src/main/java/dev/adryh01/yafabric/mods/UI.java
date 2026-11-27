@@ -1,6 +1,9 @@
 package dev.adryh01.yafabric.mods;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.util.Window;
+import org.lwjgl.opengl.GL11;
 
 /** Small drawing helpers for the white/grey menu style. */
 public final class UI {
@@ -44,5 +47,15 @@ public final class UI {
         roundRect(x, y, x + 22, y + 12, 5, lerp(0xCFCFCF, 0x3A3A3A, knob));
         int kx = x + 2 + (int) ((22 - 4 - 8) * knob);
         roundRect(kx, y + 2, kx + 8, y + 10, 3, 0xFFFFFFFF);
+    }
+
+    public static void scissor(MinecraftClient mc, int x1, int y1, int x2, int y2) {
+        int s = new Window(mc).getScaleFactor();
+        GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        GL11.glScissor(x1 * s, mc.height - y2 * s, Math.max(0, (x2 - x1) * s), Math.max(0, (y2 - y1) * s));
+    }
+
+    public static void scissorOff() {
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
 }
