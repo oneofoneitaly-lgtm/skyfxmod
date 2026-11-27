@@ -67,7 +67,7 @@ public class ClientCape extends Module {
             ClientCape c = (ClientCape) m;
             boolean self = p == Minecraft.getMinecraft().thePlayer;
             if (self ? !c.own.b : !c.others.b) return false;
-            return YaNet.uses(p.getUniqueID());
+            return YaNet.uses(p.getUniqueID()) || YaNet.hasCape(p.getUniqueID());
         }
 
         @Override

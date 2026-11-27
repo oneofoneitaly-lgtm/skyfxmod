@@ -44,6 +44,16 @@ final class YaNet {
 
     // ------------------------------------------------------------ public
 
+    private static final java.util.Map<String, Boolean> CAPES = new java.util.concurrent.ConcurrentHashMap<String, Boolean>();
+
+    /** True when the player claimed the free YA Cape on the website (the lookup is shared with uses()). */
+    static boolean hasCape(UUID id) {
+        if (id == null) return false;
+        uses(id);
+        Boolean c = CAPES.get(id.toString().replace("-", ""));
+        return c != null && c;
+    }
+
     static boolean uses(UUID id) {
         Minecraft mc = Minecraft.getMinecraft();
         if (id == null) return false;
@@ -58,7 +68,9 @@ final class YaNet {
                 public void run() {
                     try {
                         String r = http("GET", base() + "/v1/players/" + key, null);
-                        FLAGS.put(key, r.replace(" ", "").contains("\"client\":\"1\""));
+                        String rr = r.replace(" ", "");
+                        FLAGS.put(key, rr.contains("\"client\":\"1\""));
+                        CAPES.put(key, rr.contains("\"cape\":\"ya_cape\""));
                     } catch (Exception e) {
                         FLAGS.put(key, Boolean.FALSE);
                     } finally {
