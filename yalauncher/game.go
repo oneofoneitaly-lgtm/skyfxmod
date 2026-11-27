@@ -232,7 +232,9 @@ func install(p progressFn, loader string) (*installed, error) {
 			Libraries []library `json:"libraries"`
 		} `json:"versionInfo"`
 	}
-	if loader != "fabric" {
+	if loader == "weave" {
+		// Weave: plain Minecraft 1.8.9, the Weave agent is attached at launch
+	} else if loader != "fabric" {
 		p("Forge...", 0.1)
 		installer := filepath.Join(dataDir, "cache", "forge-"+forgeVersion+"-installer.jar")
 		if err := download(installer, "", forgeInstaller); err != nil {
@@ -380,7 +382,11 @@ func install(p progressFn, loader string) (*installed, error) {
 	if main == "" {
 		main = "net.minecraft.launchwrapper.Launch"
 	}
-	if loader == "fabric" {
+	if loader == "weave" {
+		cp = append(cp, clientJar)
+		args = vj.Args
+		main = "net.minecraft.client.main.Main"
+	} else if loader == "fabric" {
 		cp = append(cp, clientJar)
 		args = vj.Args
 		main = fabricMain
@@ -456,6 +462,12 @@ func launch(p progressFn, st *state) error {
 	if err := syncMods(p, st); err != nil {
 		return err
 	}
+	weaveAgent := ""
+	if st.Loader == "weave" {
+		if weaveAgent, err = weaveSetup(p); err != nil {
+			return err
+		}
+	}
 	game, _, _, _ := gameDirs()
 	perfTune(game)
 	token, utype := "0", "legacy"
@@ -484,6 +496,9 @@ func launch(p progressFn, st *state) error {
 		"-Dsun.java2d.noddraw=true", "-Dfml.ignoreInvalidMinecraftCertificates=true",
 		"-Djava.library.path=" + in.natives, "-Dminecraft.launcher.brand=YA-CLIENT",
 		"-cp", strings.Join(in.classpath, ";"), in.mainClass,
+	}
+	if weaveAgent != "" {
+		jvm = append([]string{"-javaagent:" + weaveAgent}, jvm...)
 	}
 	if st.Fullscreen {
 		gameArgs = append(gameArgs, "--fullscreen")
@@ -621,4 +636,62 @@ func perfTune(game string) {
 		"ofClouds": "3", "ofRain": "1", "ofAoLevel": "0.0", "ofLoadFar": "false", "ofPreloadedChunks": "0",
 	})
 	os.WriteFile(marker, []byte("1"), 0o644)
+}
+
+// weaveSetup downloads the Weave loader (once) and the YA CLIENT Weave mod, and returns the loader jar path.
+// Weave loads every jar it finds in ~/.weave/mods.
+func weaveSetup(p progressFn) (string, error) {
+	p("Weave loader...", 0.9)
+	loaderJar := filepath.Join(dataDir, "cache", "weave-loader.jar")
+	if _, err := os.Stat(loaderJar); err != nil {
+		var rel struct {
+			Assets []struct {
+				Name string `json:"name"`
+				URL  string `json:"browser_download_url"`
+			} `json:"assets"`
+		}
+		if err := getJSON("https://api.github.com/repos/Weave-MC/Weave-Loader/releases/latest", &rel); err != nil {
+			return "", errors.New("could not reach the Weave loader download")
+		}
+		url := ""
+		for _, a := range rel.Assets {
+			n := strings.ToLower(a.Name)
+			if strings.HasSuffix(n, ".jar") && !strings.Contains(n, "sources") && !strings.Contains(n, "javadoc") {
+				url = a.URL
+				break
+			}
+		}
+		if url == "" {
+			return "", errors.New("Weave loader file not found")
+		}
+		os.MkdirAll(filepath.Dir(loaderJar), 0o755)
+		if err := download(loaderJar, "", url); err != nil {
+			return "", err
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	modsDir := filepath.Join(home, ".weave", "mods")
+	os.MkdirAll(modsDir, 0o755)
+	dest := filepath.Join(modsDir, "YAClient.jar")
+	if repo == "" {
+		if _, e := os.Stat(dest); e != nil {
+			return "", errors.New("mods repository not set in this launcher build")
+		}
+		return loaderJar, nil
+	}
+	p("Updating YA CLIENT (Weave)...", 0.95)
+	b, err := httpGet("https://github.com/" + repo + "/releases/download/latest/YAWeave.jar")
+	if err != nil {
+		if _, e := os.Stat(dest); e == nil {
+			return loaderJar, nil // keep the old copy when offline
+		}
+		return "", errors.New("could not download YA CLIENT (Weave)")
+	}
+	if err := os.WriteFile(dest, b, 0o644); err != nil {
+		return "", err
+	}
+	return loaderJar, nil
 }

@@ -30,6 +30,9 @@ type modInfo struct{ ID, Name, Desc, File, Loader string }
 
 // forLoader: Forge mods only load with Forge, Fabric mods only with Fabric ("" = Forge, the default).
 func (m modInfo) forLoader(l string) bool {
+	if l == "weave" {
+		return m.Loader == "weave"
+	}
 	if l == "fabric" {
 		return m.Loader == "fabric"
 	}
@@ -170,15 +173,14 @@ func main() {
 	})
 	w.Bind("logout", func() { st.Account = nil; st.save() })
 	w.Bind("setMod", func(id string, on bool) { st.Mods[id] = on; st.save() })
-	st.Loader = "forge" // Fabric was dropped: Forge only
+	if st.Loader != "weave" {
+		st.Loader = "forge" // Forge (default) or Weave; Fabric was dropped
+	}
 	w.Bind("setLoader", func(l string) {
-		if l != "fabric" {
+		if l != "weave" {
 			l = "forge"
 		}
 		st.Loader = l
-		if l == "fabric" {
-			st.Mods["yafabric"] = true
-		}
 		st.save()
 	})
 	w.Bind("setRam", func(mb int) { st.RAM = mb; st.save() })

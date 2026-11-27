@@ -109,6 +109,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
 .pr .ni{flex:0 0 100%;flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;scroll-snap-align:start}
 .pr .nimg{width:100%;height:170px;border-radius:0}
 .pr .nb{padding:14px 16px;overflow:auto}.pr .ni .top{flex-wrap:wrap}.pr .ni p{font-size:13px;line-height:1.5}
+.eng{display:flex;gap:6px;margin-bottom:10px}.eng button{flex:1;padding:9px 6px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#bbb;font-weight:700;font-size:12px;cursor:pointer;line-height:1.25}.eng button small{display:block;font-weight:500;font-size:10px;color:#777;margin-top:2px}.eng button.on{border-color:#e11d2e;background:#2a0f12;color:#fff}.eng button.on small{color:#e9a0a6}
 .popti{display:flex;flex-direction:column;gap:4px}.popti b{font-size:14px}.popti span{font-size:12px;color:#8a8a8a}.popti button{margin-top:6px;align-self:flex-start}
 </style></head><body>
 <div class="side">
@@ -132,7 +133,7 @@ button{border-radius:8px;font-size:13px;border-color:var(--line)}button.primary{
             <div class="chips"><span class="c" id="cMods"></span><span class="c" id="cRam"></span></div></div>
           <img id="logo2" alt="">
         </div>
-        <div class="card lcard"><div class="label">PERFORMANCE</div><div id="popti" class="popti"></div></div>
+        <div class="card lcard"><div class="label">ENGINE</div><div class="eng" id="eng"></div><div id="popti" class="popti"></div></div>
         <div class="card gc"><div class="label">ACCOUNT</div><div id="acc"></div></div>
         <div class="grow"></div>
         <div class="dock"><div class="bar" id="bar"><i id="fill"></i></div><div class="msg" id="msg"></div>
@@ -209,7 +210,7 @@ async function doLogout(){await logout();await reload();renderAll()}
 
 let OPT={installed:"",found:""};
 async function optRefresh(){try{OPT=JSON.parse(await optifineState())}catch(e){}renderOpti()}
-function renderOpti(){const pe=$("popti");if(pe)pe.innerHTML=OPT.installed?'<b>OptiFine installed</b><span>Maximum FPS.</span>':'<b>OptiFine not installed</b><span>Install it from Mods for far more FPS.</span><button onclick="show(\'mods\')">Open Mods</button>';const el=$("opti");if(!el)return;
+function renderOpti(){const pe=$("popti");if(pe)pe.innerHTML=S.loader==="weave"?'<b>Weave engine</b><span>Built-in FPS Boost, no OptiFine needed.</span>':OPT.installed?'<b>OptiFine installed</b><span>Maximum FPS.</span>':'<b>OptiFine not installed</b><span>Install it from Mods for far more FPS.</span><button onclick="show(\'mods\')">Open Mods</button>';const el=$("opti");if(!el)return;
   if(OPT.installed){el.innerHTML='<div class="t"><b>OptiFine is installed</b><span></span></div>';el.querySelector("span").textContent=OPT.installed+" - more FPS, shaders and zoom.";return}
   el.innerHTML='<div class="t"><b>OptiFine (more FPS)</b><span style="white-space:normal">Not installed. It makes the game much faster. 1) Open the official page and download "OptiFine 1.8.9 HD U M5". 2) Come back here: it is added by itself.</span></div><div class="row" style="margin-top:10px"><button class="primary" id="oo">Open the official page</button>'+(OPT.found?'<button id="oi">Install the downloaded file</button>':'')+'</div><div class="sub" id="om" style="margin-top:8px"></div>';
   $("oo").onclick=()=>openLink("https://optifine.net/downloads");
@@ -237,7 +238,8 @@ async function loadNews(){let n=[];try{n=JSON.parse(await getRemote("news"))}cat
     const im=d.querySelector(".nimg");if(x.image){im.src=/^https?:/.test(x.image)?x.image:"https://raw.githubusercontent.com/"+S.repo+"/HEAD/data/images/"+x.image;im.onerror=()=>im.remove()}else im.remove();
     if(x.tag){const t=document.createElement("span");t.className="tg";t.textContent=x.tag;d.querySelector(".top").prepend(t)}
     d.querySelector("b").textContent=x.title||"";d.querySelector(".d").textContent=x.date||"";d.querySelector("p").textContent=x.text||"";el.appendChild(d)});ncount()}
-function renderLoader(){}
+function renderLoader(){const e=$("eng");if(!e)return;const w=S.loader==="weave";e.innerHTML='<button class="'+(w?"on":"")+'" onclick="pickEngine(\'weave\')">WEAVE<small>Lightest, max FPS</small></button><button class="'+(w?"":"on")+'" onclick="pickEngine(\'forge\')">FORGE<small>Full mods</small></button>';renderOpti()}
+async function pickEngine(l){await setLoader(l);await reload();renderAll()}
 function nscroll(d){const el=$("news");el.scrollBy({left:d*el.clientWidth,behavior:"smooth"})}
 function ncount(){const el=$("news"),n=el.querySelectorAll(".ni").length,c=$("ncount");if(!c)return;c.textContent=n?(Math.min(n,Math.round(el.scrollLeft/Math.max(1,el.clientWidth))+1)+" / "+n):""}
 (function(){const el=$("news");let lock=0;el.addEventListener("scroll",ncount);
