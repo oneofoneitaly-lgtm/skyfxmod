@@ -84,7 +84,6 @@ public class YAHome extends Screen {
             if (!in(mx, my, x - 8, 6, w + 16, 24)) continue;
             if (i == 1) mc.setScreen(new MultiplayerScreen(this));
             else if (i == 2) mc.setScreen(new SelectWorldScreen(this));
-            else if (i == 3) mc.setScreen(new OptionsScreen(this, mc.options));
             return;
         }
         if (in(mx, my, width - 34, 5, 24, 24)) {
