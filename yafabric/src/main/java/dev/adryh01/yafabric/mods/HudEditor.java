@@ -109,6 +109,7 @@ public class HudEditor extends Screen {
 
     @Override
     protected void keyPressed(char c, int key) {
+        if (key == Keyboard.KEY_RSHIFT && UI.shiftGuard()) return;
         if (key == Keyboard.KEY_ESCAPE) {
             mc.setScreen(new ModMenu());
             return;

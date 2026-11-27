@@ -58,4 +58,15 @@ public final class UI {
     public static void scissorOff() {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
+
+    private static long shiftOpened;
+
+    /** Call when a menu was opened with Right Shift: the same key press must not close it again. */
+    public static void markShiftOpen() {
+        shiftOpened = System.currentTimeMillis();
+    }
+
+    public static boolean shiftGuard() {
+        return System.currentTimeMillis() - shiftOpened < 400L;
+    }
 }

@@ -30,6 +30,10 @@ public final class Mods {
         HudMods.register(ALL);
         Extra.register(ALL);
         ALL.add(new Boost());
+        Pvp.register(ALL);
+        Fx.register(ALL);
+        Panels.register(ALL);
+        ALL.add(new NickTag());
         Catalog.register(ALL);
         // sensible defaults for a first start
         for (Module m : ALL) {
@@ -63,6 +67,7 @@ public final class Mods {
         mouseWas = l;
         rightWas = r;
         Q.tick(mc.player);
+        dev.adryh01.yafabric.YaNet.tick();
         for (Module m : ALL) {
             if (m.enabled) m.onTick();
         }

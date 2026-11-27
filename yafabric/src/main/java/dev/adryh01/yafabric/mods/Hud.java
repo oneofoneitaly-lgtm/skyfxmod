@@ -86,11 +86,12 @@ public final class Hud {
         GL11.glPushMatrix();
         GL11.glTranslatef(x, y, 0.0F);
         GL11.glScalef(s, s, 1.0F);
+        boolean blendWas = GL11.glIsEnabled(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         if (m.background.b) DrawableHelper.fill(0, 0, w, h, 0x70000000);
         p.paint(m, fr());
         GL11.glPopMatrix();
-        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        if (!blendWas) GL11.glDisable(GL11.GL_BLEND);
     }
 }

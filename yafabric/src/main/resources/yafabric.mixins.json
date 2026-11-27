@@ -8,7 +8,13 @@
     "MinecraftClientMixin",
     "InGameHudMixin",
     "AbstractClientPlayerEntityMixin",
-    "GameRendererMixin"
+    "GameRendererMixin",
+    "WorldRendererMixin",
+    "HeldItemRendererMixin",
+    "ClientPlayerInteractionManagerMixin",
+    "LivingEntityRendererMixin",
+    "ChatHudMixin",
+    "PlayerListHudMixin"
   ],
   "injectors": {
     "defaultRequire": 0

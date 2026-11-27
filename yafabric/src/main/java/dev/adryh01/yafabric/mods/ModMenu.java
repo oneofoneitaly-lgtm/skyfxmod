@@ -399,6 +399,7 @@ public class ModMenu extends Screen {
 
     @Override
     protected void keyPressed(char c, int key) {
+        if (key == Keyboard.KEY_RSHIFT && UI.shiftGuard()) return;
         if (editing != null) {
             if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_ESCAPE) {
                 editing = null;

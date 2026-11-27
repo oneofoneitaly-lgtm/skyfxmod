@@ -67,6 +67,7 @@ public class YAHub extends Screen {
 
     @Override
     protected void keyPressed(char c, int key) {
+        if (key == Keyboard.KEY_RSHIFT && UI.shiftGuard()) return;
         if (key == Keyboard.KEY_ESCAPE || key == Keyboard.KEY_RSHIFT) mc.setScreen(null);
     }
 
@@ -213,6 +214,7 @@ public class YAHub extends Screen {
 
         @Override
         protected void keyPressed(char ch, int key) {
+        if (key == Keyboard.KEY_RSHIFT && UI.shiftGuard()) return;
             if (key == Keyboard.KEY_ESCAPE) mc.setScreen(null);
             else if (key == Keyboard.KEY_RSHIFT) mc.setScreen(new YAHub());
         }

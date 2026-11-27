@@ -27,7 +27,10 @@ public final class YAHud {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc == null || mc.player == null) return;
         boolean sh = Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
-        if (sh && !shiftWas && mc.currentScreen == null) mc.setScreen(new YAHub());
+        if (sh && !shiftWas && mc.currentScreen == null) {
+            dev.adryh01.yafabric.mods.UI.markShiftOpen();
+            mc.setScreen(new YAHub());
+        }
         shiftWas = sh;
         if (mc.options.hudHidden) return;
         try {
