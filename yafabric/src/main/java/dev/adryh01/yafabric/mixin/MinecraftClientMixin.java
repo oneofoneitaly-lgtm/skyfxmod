@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
 
-    @ModifyVariable(method = "openScreen(Lnet/minecraft/client/gui/screen/Screen;)V", at = @At("HEAD"), argsOnly = true)
+    @ModifyVariable(method = "setScreen(Lnet/minecraft/client/gui/screen/Screen;)V", at = @At("HEAD"), argsOnly = true)
     private Screen yaReplaceTitle(Screen screen) {
         if (screen != null && screen.getClass() == TitleScreen.class) {
             return new YAHome();

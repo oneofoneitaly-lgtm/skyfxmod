@@ -3,7 +3,7 @@
   "id": "yafabric",
   "version": "${version}",
   "name": "YA CLIENT (Fabric)",
-  "description": "YA CLIENT for Legacy Fabric 1.8.9: YA home screen. By @Adryh01.",
+  "description": "YA CLIENT for Legacy Fabric 1.8.9: YA home screen, modules, menu and cape. By @Adryh01.",
   "authors": ["@Adryh01"],
   "license": "All Rights Reserved",
   "environment": "client",
