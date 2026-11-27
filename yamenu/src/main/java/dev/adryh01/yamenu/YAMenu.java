@@ -28,6 +28,7 @@ public class YAMenu {
     private static Boolean homeNew;
 
     static boolean homeNew() {
+        if (true) return false; // the test home was removed: always the classic home
         if (homeNew == null) {
             try {
                 java.io.File f = new java.io.File(Minecraft.getMinecraft().mcDataDir, "config/yamenu-home.txt");

@@ -21,7 +21,6 @@ final class YAMainMenuClassic extends YAScreen {
         buttonList.add(new YButton(2, x, y + 28, bw, 22, I18n.format("menu.multiplayer")));
         buttonList.add(new YButton(0, 10, height - 28, 64, 18, I18n.format("menu.options")));
         buttonList.add(new YButton(5, 80, height - 28, 64, 18, "Language"));
-        buttonList.add(new YButton(9, width / 2 - 45, height - 28, 90, 18, "New home (test)"));
         buttonList.add(new YButton(4, width - 74, height - 28, 64, 18, I18n.format("menu.quit")));
     }
 
@@ -39,10 +38,6 @@ final class YAMainMenuClassic extends YAScreen {
                 break;
             case 5:
                 mc.displayGuiScreen(new GuiLanguage(this, mc.gameSettings, mc.getLanguageManager()));
-                break;
-            case 9:
-                YAMenu.setHomeNew(true);
-                mc.displayGuiScreen(new YAHome());
                 break;
             case 4:
                 mc.shutdown();
