@@ -107,23 +107,56 @@ public class YAHub extends GuiScreen {
             // preview
             UI.roundBox(px + 14, py + 34, px + 134, py + ph - 14, 5, UI.BORDER, 0xFFE4E4E4, 1);
             preview(px + 74, py + ph - 24, 58);
-            // cape card
+            // column of every cosmetic, scrollable
+            int lx = px + 146, ly = py + 34, lw = pw - 160, lh = ph - 48;
+            UI.scissor(mc, lx - 2, ly, lx + lw + 2, ly + lh);
+            int y = ly - (int) scroll;
             ClientCape c = cape();
-            UI.roundBox(px + 146, py + 34, px + pw - 14, py + 92, 5, UI.BORDER, UI.CARD, 1);
-            fr.drawString("YA Cape", px + 156, py + 42, UI.DARK);
-            fr.drawString("White 3D cape, black YA logo.", px + 156, py + 56, UI.SOFT);
-            fr.drawString("Worn by every YA player.", px + 156, py + 67, UI.SOFT);
-            row(px + 146, py + 100, "Show my cape", c.own.b);
-            row(px + 146, py + 124, "Show other players' cape", c.others.b);
-            row(px + 146, py + 148, "Cape enabled", c.enabled);
+            y = head(lx, y, lw, "YA Cape", c.enabled ? "Equipped" : "Off", c.enabled);
+            y = sub(lx, y, lw, "Show my cape", c.own.b);
+            y = sub(lx, y, lw, "Show other players' cape", c.others.b);
+            y += 6;
+            y = soon(lx, y, lw, "Wings");
+            y = soon(lx, y, lw, "Bandanas");
+            y = soon(lx, y, lw, "Pets");
+            content = y + (int) scroll - ly;
+            UI.scissorOff();
+            maxScroll = Math.max(0, content - lh);
+            if (scroll > maxScroll) scroll = maxScroll;
         }
 
-        private void row(int x, int y, String t, boolean on) {
-            UI.roundBox(x, y, x + pw - 160, y + 20, 4, UI.BORDER, UI.CARD, 1);
-            fontRendererObj.drawString(t, x + 10, y + 6, UI.DARK);
-            UI.sw(x + pw - 160 - 32, y + 4, on ? 1.0F : 0.0F);
+        private float scroll;
+        private int content, maxScroll;
+
+        // layout helpers: each returns the next y
+        private int head(int x, int y, int w, String t, String st, boolean on) {
+            UI.roundBox(x, y, x + w, y + 28, 4, UI.BORDER, UI.CARD, 1);
+            fontRendererObj.drawString(t, x + 10, y + 10, UI.DARK);
+            fontRendererObj.drawString(st, x + w - 46 - fontRendererObj.getStringWidth(st), y + 10, UI.SOFT);
+            UI.sw(x + w - 32, y + 8, on ? 1.0F : 0.0F);
+            return y + 32;
         }
 
+        private int sub(int x, int y, int w, String t, boolean on) {
+            UI.roundBox(x + 10, y, x + w, y + 20, 4, UI.BORDER, UI.CARD, 1);
+            fontRendererObj.drawString(t, x + 20, y + 6, UI.DARK);
+            UI.sw(x + w - 32, y + 4, on ? 1.0F : 0.0F);
+            return y + 24;
+        }
+
+        private int soon(int x, int y, int w, String t) {
+            UI.roundBox(x, y, x + w, y + 28, 4, UI.BORDER, 0xFFEDEDED, 1);
+            fontRendererObj.drawString(t, x + 10, y + 10, UI.SOFT);
+            fontRendererObj.drawString("Coming soon", x + w - 10 - fontRendererObj.getStringWidth("Coming soon"), y + 10, UI.SOFT);
+            return y + 32;
+        }
+
+        @Override
+        public void handleMouseInput() throws IOException {
+            super.handleMouseInput();
+            int d = org.lwjgl.input.Mouse.getEventDWheel();
+            if (d != 0) scroll = Math.max(0, Math.min(maxScroll, scroll - Integer.signum(d) * 18));
+        }
         private boolean in(int mx, int my, int x, int y, int w, int h) {
             return mx >= x && mx < x + w && my >= y && my < y + h;
         }
@@ -177,10 +210,12 @@ public class YAHub extends GuiScreen {
                 return;
             }
             ClientCape c = cape();
-            int w = pw - 160;
-            if (in(mx, my, px + 146, py + 100, w, 20)) c.own.b = !c.own.b;
-            else if (in(mx, my, px + 146, py + 124, w, 20)) c.others.b = !c.others.b;
-            else if (in(mx, my, px + 146, py + 148, w, 20)) c.setEnabled(!c.enabled);
+            int lx = px + 146, ly = py + 34, lw = pw - 160, lh = ph - 48;
+            if (!in(mx, my, lx, ly, lw, lh)) return;
+            int y = ly - (int) scroll;
+            if (in(mx, my, lx, y, lw, 28)) c.setEnabled(!c.enabled);
+            else if (in(mx, my, lx + 10, y + 32, lw - 10, 20)) c.own.b = !c.own.b;
+            else if (in(mx, my, lx + 10, y + 56, lw - 10, 20)) c.others.b = !c.others.b;
         }
 
         @Override

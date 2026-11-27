@@ -35,7 +35,7 @@ public class ClientCape extends Module {
         enabled = true;
     }
 
-    /** A cape 10 wide, 16 tall and 2 thick (vanilla is 1) so the white edge is visible from the side. */
+    /** Exactly the vanilla cape box (10 x 16 x 1); only the texture is ours. */
     static final class Model extends ModelBase {
         final ModelRenderer cape;
 
@@ -43,7 +43,7 @@ public class ClientCape extends Module {
             textureWidth = 64; // the PNG is bigger, the UV is relative, so the logo stays sharp
             textureHeight = 32;
             cape = new ModelRenderer(this, 0, 0);
-            cape.addBox(-5.0F, 0.0F, -2.0F, 10, 16, 2, 0.0F);
+            cape.addBox(-5.0F, 0.0F, -1.0F, 10, 16, 1, 0.0F);
         }
 
         void render(float scale) {
