@@ -28,6 +28,7 @@ public final class Mods {
         file = new File(MinecraftClient.getInstance().runDirectory, "config/yafabric-mods.properties");
         ALL.clear();
         HudMods.register(ALL);
+        Extra.register(ALL);
         Catalog.register(ALL);
         // sensible defaults for a first start
         for (Module m : ALL) {
